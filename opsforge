@@ -1,0 +1,224 @@
+#!/usr/bin/env ruby
+
+require 'yaml'
+require 'open3'
+require 'json'
+
+AWS_WHITELIST = ['one_ee_token']
+
+def verify_requirements
+    ['aws', 'terraform', 'ansible'].each do |cmd|
+        cmd_exists?(cmd)
+    end
+end
+
+# TODO
+def verify_deployment(infra, opsforge_template)
+    # Check engine port reachable
+    # Check Sunstone port reachable
+    # Check FireEdge port reachable
+    # Check engine -> oned
+    # Check engine -> oneflow
+end
+
+# TODO: create a schema for opsforge template and validate it
+def validate_template(opsforge_template); end
+
+def terraform_aws(opsforge_template)
+    ec2_instances = {
+        :frontend => nil,
+        :engine => nil
+    }
+
+    generate_tfvars_aws(opsforge_template)
+    infra = JSON.parse(terraform('aws').last)
+
+    ['frontend', 'engine'].each do |ec2|
+        ec2_instances[ec2.to_sym] =
+            infra["ssh_connection_#{ec2}"]['value'].split(' ').last.split('@').last
+    end
+
+    return ec2_instances
+end
+
+# TODO: Sunstone port
+# TODO: FireEdge port
+def ansible(infra, opsforge_template)
+    inventory = {
+        'frontend' => {
+            'hosts' => {
+                'f1' => {
+                    'ansible_host' => infra[:frontend]
+                }
+            },
+            'vars' => {
+                'one_version' => opsforge_template[:one][:version],
+                'one_pass' => opsforge_template[:one][:password],
+                'features' => {
+                    'prometheus' => false,
+                    'gateproxy' => false
+                },
+                'vn' => {
+                    'admin_net' => {
+                        'managed' => true,
+                        'template' => {
+                            'VN_MAD' => 'bridge',
+                        'PHYDEV' => 'eth0',
+                        'BRIDGE' => 'br0',
+                        'AR' => {
+                            'TYPE' => 'IP4',
+                            'IP' => '172.20.0.100',
+                            'SIZE' => 48,
+                            'NETWORK_ADDRESS' => '172.20.0.0',
+                            'NETWORK_MASK' => '255.255.255.0',
+                            'GATEWAY' => '172.20.0.1',
+                            'DNS' => '1.1.1.1'
+                        }
+                        }
+                    }
+                }
+            }
+        },
+        'engine' => {
+            'hosts' => {
+                'e1' => {
+                    'ansible_host' => infra[:engine]
+                }
+            },
+            'vars' => {
+                'oned' => "http://#{infra[:frontend]}:2633/RPC2",
+                'oneflow' => "http://#{infra[:frontend]}:2474"
+            },
+            'roles' => ['engine']
+        }
+    }
+
+    if opsforge_template[:one][:ee_token]
+        inventory['frontend']['vars']['one_token'] = opsforge_template[:one][:ee_token]
+        inventory['frontend']['vars']['features']['prometheus'] = true
+    end
+
+    inventory = inventory.to_yaml
+
+    cfg = <<~EOT
+        [defaults]
+        collections_paths=./one-deploy/ansible_collections/
+        inventory=./inventory.yaml
+        gathering=explicit
+        host_key_checking=false
+        display_skipped_hosts=true
+        retry_files_enabled=false
+        any_errors_fatal=true
+        stdout_callback=yaml
+        timeout=30
+        private_key_file = #{opsforge_template[:aws][:ssh_key_path]}
+        remote_user = ubuntu
+
+        [privilege_escalation]
+        become=true
+        become_user=root
+
+        [ssh_connection]
+        pipelining=true
+        ssh_args=-q -o ControlMaster=auto -o ControlPersist=60
+
+    EOT
+
+    Dir.chdir("#{__dir__}/ansible/one-deploy")
+    cmd_exec('make requirements')
+    Dir.chdir("#{__dir__}/ansible")
+
+    File.write("#{__dir__}/ansible/inventory.yaml", inventory)
+    File.write("#{__dir__}/ansible/ansible.cfg", cfg)
+
+    cmd_exec('ansible-playbook playbooks/cognit.yaml')
+    Dir.chdir("#{__dir__}/..")
+end
+
+def terraform_opennebula; end
+
+def clean
+    Dir.chdir("#{__dir__}/terraform/aws")
+    cmd_exec('terraform destroy --auto-approve')
+
+    ['ansible.cfg', 'inventory.yaml'].each do |file|
+        File.delete("#{__dir__}/ansible/#{file}")
+    end
+end
+
+# Helpers
+
+def cmd_exec(cmd)
+    o, e, s = Open3.capture3(cmd)
+
+    raise e unless s == 0
+
+    o
+end
+
+def cmd_exists?(command)
+    exts = ENV['PATHEXT'] ? ENV['PATHEXT'].split(';') : ['']
+    ENV['PATH'].split(File::PATH_SEPARATOR).each do |path|
+        exts.each do |ext|
+            exe = File.join(path, "#{command}#{ext}")
+            return true if File.executable?(exe) && !File.directory?(exe)
+        end
+    end
+    false
+end
+
+def generate_tfvars_aws(opsforge_template)
+    tfvars = "#{__dir__}/terraform/aws/terraform.tfvars"
+
+    File.new(tfvars, 'w') unless File.exist?(tfvars)
+    File.open(tfvars, 'w') do |file|
+        opsforge_template.each do |infra, conf|
+            conf.each do |setting, value|
+                file.puts("#{infra}_#{setting} = \"#{value}\"") unless AWS_WHITELIST.include?("#{infra}_#{setting}")
+            end
+        end
+    end
+end
+
+def terraform(provider)
+    output = []
+
+    Dir.chdir("#{__dir__}/terraform/#{provider}")
+
+    ['terraform init', 'terraform apply --auto-approve', 'terraform output -json'].each do |cmd|
+        o, e, s = Open3.capture3(cmd)
+
+        raise e unless s == 0
+
+        output << o
+    end
+
+    Dir.chdir("#{__dir__}/../../")
+
+    output
+end
+
+# BEGIN
+
+# TODO: Add logs for terraform and ansible outputs
+
+verify_requirements
+
+case ARGV[0]
+when 'deploy'
+    opsforge_template = YAML.load_file(ARGV[1])
+    validate_template(opsforge_template)
+
+    infra = terraform_aws(opsforge_template)
+    ansible(infra, opsforge_template)
+    terraform_opennebula(infra[:frontend], opsforge_template)
+
+    verify_deployment(infra, opsforge_template)
+
+    puts infra
+when 'clean'
+    clean
+else
+    STDERR.puts 'invalid command'
+    exit 1
+end
