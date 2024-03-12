@@ -1,0 +1,45 @@
+---
+- name: Clone Provigion Engine repo
+  ansible.builtin.git:
+    repo: https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine.git
+    dest: "{{ engine_repo }}"
+    force: true
+
+- name: Install Ruby
+  become: true
+  block:
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - ruby
+          - ruby-dev
+          - build-essential
+          - zlib1g-dev
+        state: present
+        update_cache: true
+
+- name: Install engine
+  ansible.builtin.command:
+    cmd: "./install.sh"
+    chdir: "{{ engine_repo }}"
+
+- name: Set the frontend to listen on every host
+  lineinfile:
+    path: /etc/provision-engine/engine.conf
+    regexp: '^:host:'
+    line: ':host: 0.0.0.0'
+
+- name: Point Engine to frontend
+  ansible.builtin.command:
+    cmd: "./prepare.rb {{ oned }} {{ oneflow }}"
+    chdir: "{{ engine_repo }}/tests"
+
+# TODO: issue restarts instead for playbook rerun
+- name: Start engine
+  ansible.builtin.command:
+    cmd: provision-engine-server start
+
+- name: Check if engine port is being used
+  ansible.builtin.wait_for:
+    port: 1337
+    timeout: 5
