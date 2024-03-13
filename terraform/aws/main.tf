@@ -158,12 +158,28 @@ resource "aws_security_group" "engine" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Allow cognit_engine_port from anywhere
+  # Allow Provision Engine access from anywhere
   ingress {
     from_port   = var.cognit_engine_port
     to_port     = var.cognit_engine_port
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow access to oned from your local machine
+  ingress {
+    from_port   = 2633
+    to_port     = 2633
+    protocol    = "tcp"
+    cidr_blocks = ["${var.local_machine_ip}/32"]
+  }
+
+  # Allow access to oneflow from your local machine
+  ingress {
+    from_port   = 2474
+    to_port     = 2474
+    protocol    = "tcp"
+    cidr_blocks = ["${var.local_machine_ip}/32"]
   }
 }
 

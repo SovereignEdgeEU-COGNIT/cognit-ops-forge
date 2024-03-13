@@ -1,0 +1,15 @@
+{
+  "TEMPLATE": {
+    "BODY": {
+      "name": "FaaS",
+      "deployment": "straight",
+      "roles": [
+        {
+          "name": "FaaS",
+          "cardinality": 1,
+          "vm_template": "${vm_template_id}"
+        }
+      ]
+    }
+  }
+}

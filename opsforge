@@ -3,12 +3,13 @@
 require 'yaml'
 require 'open3'
 require 'json'
-
-AWS_WHITELIST = ['one_ee_token']
+require 'net/http'
 
 def verify_requirements
     ['aws', 'terraform', 'ansible'].each do |cmd|
-        cmd_exists?(cmd)
+        if !cmd_exists?(cmd)
+            raise "Missing required command #{cmd}. Check requirements on documentation."
+        end
     end
 end
 
@@ -25,25 +26,43 @@ end
 def validate_template(opsforge_template); end
 
 def terraform_aws(opsforge_template)
+    puts 'Setting up infrastructure on AWS'
+
     ec2_instances = {
         :frontend => nil,
         :engine => nil
     }
 
-    generate_tfvars_aws(opsforge_template)
+    tfvars = "#{__dir__}/terraform/aws/terraform.tfvars"
+    File.new(tfvars, 'w') unless File.exist?(tfvars)
+
+    File.open(tfvars, 'w') do |file|
+        file.puts("local_machine_ip = \"#{public_ip}\"")
+
+        opsforge_template.each do |infra, conf|
+            conf.each do |setting, value|
+                file.puts("#{infra}_#{setting} = \"#{value}\"")
+            end
+        end
+    end
+
     infra = JSON.parse(terraform('aws').last)
 
     ['frontend', 'engine'].each do |ec2|
-        ec2_instances[ec2.to_sym] =
-            infra["ssh_connection_#{ec2}"]['value'].split(' ').last.split('@').last
+        ec2_instances[ec2.to_sym] = infra[ec2]['value']
     end
+
+    puts 'Infrastructure on AWS has been deployed'
 
     return ec2_instances
 end
 
 # TODO: Sunstone port
 # TODO: FireEdge port
+# TODO: baremetal deployment
 def ansible(infra, opsforge_template)
+    puts 'Installing Frontend and Provisioning Engine'
+
     inventory = {
         'frontend' => {
             'hosts' => {
@@ -133,9 +152,30 @@ def ansible(infra, opsforge_template)
 
     cmd_exec('ansible-playbook playbooks/cognit.yaml')
     Dir.chdir("#{__dir__}/..")
+
+    puts 'Frontend and Provisioning Engine installed'
 end
 
-def terraform_opennebula; end
+def terraform_opennebula(frontend_info, opsforge_template)
+    puts 'Setting up Frontend for Cognit'
+
+    tfvars = "#{__dir__}/terraform/opennebula/terraform.tfvars"
+    File.new(tfvars, 'w') unless File.exist?(tfvars)
+
+    frontend = frontend_info['value']
+    oned = "http://#{frontend}:2633/RPC2"
+    oneflow = "http://#{frontend}:2474"
+
+    File.open(tfvars, 'w') do |file|
+        file.puts("oned = \"#{oned}\"")
+        file.puts("oneflow = \"#{oneflow}\"")
+        file.puts("password = \"#{opsforge_template[:one][:password]}\"")
+    end
+
+    terraform('opennebula')
+
+    puts 'Frontend ready for Cognit'
+end
 
 def clean
     Dir.chdir("#{__dir__}/terraform/aws")
@@ -151,7 +191,12 @@ end
 def cmd_exec(cmd)
     o, e, s = Open3.capture3(cmd)
 
-    raise e unless s == 0
+    if s != 0
+        STDERR.puts "Command \"#{cmd}\" failed:"
+        raise "#{o}\n#{e}"
+    end
+
+    log(o)
 
     o
 end
@@ -167,40 +212,34 @@ def cmd_exists?(command)
     false
 end
 
-def generate_tfvars_aws(opsforge_template)
-    tfvars = "#{__dir__}/terraform/aws/terraform.tfvars"
-
-    File.new(tfvars, 'w') unless File.exist?(tfvars)
-    File.open(tfvars, 'w') do |file|
-        opsforge_template.each do |infra, conf|
-            conf.each do |setting, value|
-                file.puts("#{infra}_#{setting} = \"#{value}\"") unless AWS_WHITELIST.include?("#{infra}_#{setting}")
-            end
-        end
-    end
-end
-
 def terraform(provider)
     output = []
 
     Dir.chdir("#{__dir__}/terraform/#{provider}")
 
     ['terraform init', 'terraform apply --auto-approve', 'terraform output -json'].each do |cmd|
-        o, e, s = Open3.capture3(cmd)
-
-        raise e unless s == 0
-
-        output << o
+        output << cmd_exec(cmd)
     end
 
-    Dir.chdir("#{__dir__}/../../")
+    Dir.chdir(__dir__)
 
     output
 end
 
-# BEGIN
+def public_ip
+    uri = URI('https://api.ipify.org')
+    response = Net::HTTP.get(uri)
+    response.strip
+end
 
-# TODO: Add logs for terraform and ansible outputs
+def log(info)
+    file = "#{__dir__}/opsforge.log"
+    File.open(file, 'a') do |f|
+        f.puts info
+    end
+end
+
+# BEGIN
 
 verify_requirements
 
@@ -216,6 +255,8 @@ when 'deploy'
     verify_deployment(infra, opsforge_template)
 
     puts infra
+    puts 'Logs available at ./opsforge.log'
+    puts "Take a look at AWS cluster provisioning in order to setup your KVM cluster\nhttps://docs.opennebula.io/6.8/provision_clusters/providers/aws_provider.html#aws-provider"
 when 'clean'
     clean
 else
