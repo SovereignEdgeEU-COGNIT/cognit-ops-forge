@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     opennebula = {
-      source = "OpenNebula/opennebula"
+      source  = "OpenNebula/opennebula"
       version = "~> 1.4"
     }
   }
@@ -10,6 +10,6 @@ terraform {
 provider "opennebula" {
   endpoint      = var.oned
   flow_endpoint = var.oneflow
-    username = "oneadmin"
-    password = var.password
+  username      = "oneadmin"
+  password      = var.password
 }

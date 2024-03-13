@@ -60,14 +60,14 @@ resource "aws_instance" "frontend" {
   tags = {
     Name = "cognit-frontend"
   }
-  instance_type          = var.aws_instance_type
-  ami                    = data.aws_ssm_parameter.ubuntu.value
+  instance_type = var.aws_instance_type
+  ami           = data.aws_ssm_parameter.ubuntu.value
   root_block_device {
     volume_size = var.aws_volume_size
   }
-  subnet_id              = aws_subnet.cognit.id
-  key_name               = var.aws_ssh_key
-  vpc_security_group_ids = [aws_security_group.frontend.id]
+  subnet_id                   = aws_subnet.cognit.id
+  key_name                    = var.aws_ssh_key
+  vpc_security_group_ids      = [aws_security_group.frontend.id]
   associate_public_ip_address = true
 
   connection {
@@ -84,14 +84,14 @@ resource "aws_instance" "engine" {
   tags = {
     Name = "cognit-provision_engine"
   }
-  instance_type          = var.aws_instance_type
-  ami                    = data.aws_ssm_parameter.ubuntu.value
+  instance_type = var.aws_instance_type
+  ami           = data.aws_ssm_parameter.ubuntu.value
   root_block_device {
     volume_size = var.aws_volume_size
   }
-  subnet_id              = aws_subnet.cognit.id
-  key_name               = var.aws_ssh_key
-  vpc_security_group_ids = [aws_security_group.engine.id]
+  subnet_id                   = aws_subnet.cognit.id
+  key_name                    = var.aws_ssh_key
+  vpc_security_group_ids      = [aws_security_group.engine.id]
   associate_public_ip_address = true
   connection {
     type        = "ssh"
@@ -136,6 +136,22 @@ resource "aws_security_group" "frontend" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  # Allow access to oned from your local machine
+  ingress {
+    from_port   = 2633
+    to_port     = 2633
+    protocol    = "tcp"
+    cidr_blocks = ["${var.local_machine_ip}/32"]
+  }
+
+  # Allow access to oneflow from your local machine
+  ingress {
+    from_port   = 2474
+    to_port     = 2474
+    protocol    = "tcp"
+    cidr_blocks = ["${var.local_machine_ip}/32"]
+  }
 }
 
 # Security Group for Engine
@@ -165,40 +181,24 @@ resource "aws_security_group" "engine" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  # Allow access to oned from your local machine
-  ingress {
-    from_port   = 2633
-    to_port     = 2633
-    protocol    = "tcp"
-    cidr_blocks = ["${var.local_machine_ip}/32"]
-  }
-
-  # Allow access to oneflow from your local machine
-  ingress {
-    from_port   = 2474
-    to_port     = 2474
-    protocol    = "tcp"
-    cidr_blocks = ["${var.local_machine_ip}/32"]
-  }
 }
 
 # Security Group Rule for Engine to Frontend (oned)
 resource "aws_security_group_rule" "engine_to_frontend_oned" {
-  type                     = "ingress"
-  from_port                = 2633
-  to_port                  = 2633
-  protocol                 = "tcp"
-  security_group_id        = aws_security_group.frontend.id
-  cidr_blocks              = [aws_subnet.cognit.cidr_block] # Allow from the cognit subnet
+  type              = "ingress"
+  from_port         = 2633
+  to_port           = 2633
+  protocol          = "tcp"
+  security_group_id = aws_security_group.frontend.id
+  cidr_blocks       = [aws_subnet.cognit.cidr_block] # Allow from the cognit subnet
 }
 
 # Security Group Rule for Engine to Frontend (oneflow)
 resource "aws_security_group_rule" "engine_to_frontend_oneflow" {
-  type                     = "ingress"
-  from_port                = 2474
-  to_port                  = 2474
-  protocol                 = "tcp"
-  security_group_id        = aws_security_group.frontend.id
-  cidr_blocks              = [aws_subnet.cognit.cidr_block] # Allow from the cognit subnet
+  type              = "ingress"
+  from_port         = 2474
+  to_port           = 2474
+  protocol          = "tcp"
+  security_group_id = aws_security_group.frontend.id
+  cidr_blocks       = [aws_subnet.cognit.cidr_block] # Allow from the cognit subnet
 }

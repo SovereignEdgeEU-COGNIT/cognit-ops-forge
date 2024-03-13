@@ -34,11 +34,6 @@
     cmd: "./prepare.rb {{ oned }} {{ oneflow }}"
     chdir: "{{ engine_repo }}/tests"
 
-- name: Check if engine port is being used
-  ansible.builtin.wait_for:
-    port: 1337
-    timeout: 5
-
 - name: Start engine
   ansible.builtin.command: provision-engine-server start
   ignore_errors: true
