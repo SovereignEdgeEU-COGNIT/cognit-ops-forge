@@ -10,7 +10,7 @@ Infra
 
 The deployment will create it's own VPC, Internet Gateway and subnets with the proper network configuration for the EC2 instances to communicate with each other. It can be done in any region, by default `eu-central-1`.
 
-## Requirements
+Requirements
 
 - terraform
 - awscli
@@ -45,6 +45,9 @@ The only mandatory setting is the `ssh_key`. The rest uses default values. You c
 
 # Terminate
 
-Run `./opsforge clean` to destroy the instances from AWS and the generated ansible inventory.
+Run `./opsforge clean` to
+- destroy the instances from AWS
+- delete the generated ansible inventory
+- delete the logfile
 
 

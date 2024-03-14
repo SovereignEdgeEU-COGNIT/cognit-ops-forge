@@ -59,3 +59,8 @@ variable "ssh_user" {
   type        = string
   default     = "ubuntu"
 }
+
+variable "local_machine_ip" {
+  description = "The IP address of your local machine used to allow oned and oneflow access for terraform-opennebula"
+  type        = string
+}

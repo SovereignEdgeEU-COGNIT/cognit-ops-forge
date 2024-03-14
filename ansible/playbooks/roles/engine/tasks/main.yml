@@ -34,10 +34,9 @@
     cmd: "./prepare.rb {{ oned }} {{ oneflow }}"
     chdir: "{{ engine_repo }}/tests"
 
-# TODO: issue restarts instead for playbook rerun
 - name: Start engine
-  ansible.builtin.command:
-    cmd: provision-engine-server start
+  ansible.builtin.command: provision-engine-server start
+  ignore_errors: true
 
 - name: Check if engine port is being used
   ansible.builtin.wait_for:
