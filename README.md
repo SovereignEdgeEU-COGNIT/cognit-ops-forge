@@ -1,6 +1,6 @@
-# Cognit OpsForge
+# COGNIT OpsForge
 
-A Cognitive Serverless Framework for the Cloud-Edge Continuum. With OpsForge you can deploy the Cognit Stack on AWS.
+A Cognitive Serverless Framework for the Cloud-Edge Continuum. With OpsForge you can deploy the COGNIT Stack on AWS.
 
 Currently it is ready to automatically deploy the following components:
 
