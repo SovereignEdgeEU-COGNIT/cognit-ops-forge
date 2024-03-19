@@ -1,10 +1,26 @@
-# opsforge
+# Cognit OpsForge
 
-Deploy the Cognit Infrastructure on AWS
+A Cognitive Serverless Framework for the Cloud-Edge Continuum
 
-Infra
-- Frontend node
+With OpsForge you ca deploy the Cognit Stack on AWS.
+
+Currently it is ready to automatically deploy the following components:
+
+- OpenNebula Frontend node
 - Provision Engine
+
+The missing components that need to be deployed manually are, please follow the links to learn how to install them:
+
+- [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator)
+- [Serverless Runtime](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime)
+
+Also you'll need a device client to make use of the infrasrudtucture from your application
+
+- [Device Client Python](https://github.com/SovereignEdgeEU-COGNIT/device-runtime-py)
+- [Device Client C](https://github.com/SovereignEdgeEU-COGNIT/device-runtime-c)
+
+The resulting solution deployed in AWS has the following architecture:
+
 
 # Deploy
 
