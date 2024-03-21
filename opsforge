@@ -5,6 +5,13 @@ require 'open3'
 require 'json'
 require 'net/http'
 
+HELP = <<~EOT
+    opsforge CLI options
+        deploy -> Deploys the COGNIT architecture on AWS
+        clean  -> Frees up the resources on the public cloud
+        help   -> This help message
+EOT
+
 def verify_requirements
     ['aws', 'terraform', 'ansible'].each do |cmd|
         if !cmd_exists?(cmd)
@@ -30,7 +37,8 @@ def terraform_aws(opsforge_template)
 
     ec2_instances = {
         :frontend => nil,
-        :engine => nil
+        :engine => nil,
+        :ai_orchestrator => nil
     }
 
     tfvars = "#{__dir__}/terraform/aws/terraform.tfvars"
@@ -48,7 +56,7 @@ def terraform_aws(opsforge_template)
 
     infra = JSON.parse(terraform('aws').last)
 
-    ['frontend', 'engine'].each do |ec2|
+    ['frontend', 'engine', 'ai_orchestrator'].each do |ec2|
         ec2_instances[ec2.to_sym] = infra[ec2]['value']
     end
 
@@ -188,6 +196,8 @@ def terraform_opennebula(frontend, opsforge_template)
 end
 
 def clean
+    puts 'Destroying resources created on AWS'
+
     ['opennebula', 'aws'].each do |provider|
         Dir.chdir("#{__dir__}/terraform/#{provider}")
         cmd_exec('terraform destroy --auto-approve', false)
@@ -198,6 +208,8 @@ def clean
     end
 
     File.delete("#{__dir__}/opsforge.log")
+
+    puts 'COGNIT deployment succesfully destroyed'
 end
 
 # Helpers
@@ -253,28 +265,43 @@ def log(info)
     end
 end
 
+def howlong(&logic)
+    start_time = Time.now
+    logic.call
+    puts "Took #{Time.now - start_time} seconds"
+end
+
 # BEGIN
 
 verify_requirements
 
 case ARGV[0]
 when 'deploy'
-    # TODO: Add timer for each stage
     opsforge_template = YAML.load_file(ARGV[1])
     validate_template(opsforge_template)
 
-    infra = terraform_aws(opsforge_template)
-    ansible(infra, opsforge_template)
-    terraform_opennebula(infra[:frontend], opsforge_template)
+    infra = nil
+
+    howlong { infra = terraform_aws(opsforge_template) }
+    howlong { ansible(infra, opsforge_template) }
+    howlong { terraform_opennebula(infra[:frontend], opsforge_template) }
 
     verify_deployment(infra, opsforge_template)
 
-    puts infra
-    puts 'Logs available at ./opsforge.log'
-    puts "Take a look at AWS cluster provisioning in order to setup your KVM cluster\nhttps://docs.opennebula.io/6.8/provision_clusters/providers/aws_provider.html#aws-provider"
+    report = <<~EOT
+
+        #{JSON.pretty_generate(infra)}
+
+        Logs available at ./opsforge.log'
+        Take a look at AWS cluster provisioning in order to setup your KVM cluster\nhttps://docs.opennebula.io/6.8/provision_clusters/providers/aws_provider.html#aws-provider
+    EOT
+
+    puts report
 when 'clean'
     clean
+when 'help'
+    puts HELP
 else
-    STDERR.puts 'invalid command'
+    STDERR.puts HELP
     exit 1
 end
