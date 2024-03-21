@@ -27,6 +27,12 @@ terraform.rc
 # Ignore program input template with sensitive info
 example.yaml
 
+# Ignore ansible generated files
 ansible/ansible.cfg
 ansible/inventory.yaml
+
+# Ignore generated log
 opsforge.log
+
+# Ignore asciinema files
+*.cast
