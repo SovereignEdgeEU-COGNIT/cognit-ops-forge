@@ -23,7 +23,7 @@
     cmd: "./install.sh"
     chdir: "{{ engine_repo }}"
 
-- name: Set the frontend to listen on every host
+- name: Set the engine to listen on every host
   lineinfile:
     path: /etc/provision-engine/engine.conf
     regexp: '^:host:'
