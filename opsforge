@@ -4,6 +4,7 @@ require 'yaml'
 require 'open3'
 require 'json'
 require 'net/http'
+require 'fileutils'
 
 HELP = <<~EOT
     opsforge CLI options
@@ -207,6 +208,8 @@ def clean
         File.delete("#{__dir__}/ansible/#{file}")
     end
 
+    FileUtils.rm_rf('/var/tmp/opennebula-extensions')
+
     File.delete("#{__dir__}/opsforge.log")
 
     puts 'COGNIT deployment succesfully destroyed'
@@ -290,10 +293,13 @@ when 'deploy'
 
     report = <<~EOT
 
+        Infrastructure
         #{JSON.pretty_generate(infra)}
 
-        Logs available at ./opsforge.log'
-        Take a look at AWS cluster provisioning in order to setup your KVM cluster\nhttps://docs.opennebula.io/6.8/provision_clusters/providers/aws_provider.html#aws-provider
+        [INFO] Connect to these hosts with the <ubuntu> user using the provided ssh key'
+        [INFO] Logs available at ./opsforge.log'
+        [POSTINSTALL] Take a look at AWS cluster provisioning in order to setup your KVM cluster\nhttps://docs.opennebula.org/stable/provision_clusters/providers/aws_provider.html#aws-provider
+        [POSTINSTALL] After that, take a look at the Energy Consumption extension\nhttps://github.com/SovereignEdgeEU-COGNIT/opennebula-extensions?tab=readme-ov-file#scaphandre-extension
     EOT
 
     puts report

@@ -5,3 +5,7 @@
   hosts: "{{ engine_group | d('engine') }}"
   roles:
     - engine
+- name: Setup opennebula-extensions
+  hosts: "{{ frontend_group | d('frontend') }}"
+  roles:
+    - opennebula-extensions

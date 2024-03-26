@@ -1,2 +1,2 @@
 ---
-engine_repo: /home/ubuntu/provision-engine
+extensions_repo: /var/tmp/opennebula-extensions

@@ -1,44 +1,44 @@
 ---
-- name: Clone Provigion Engine repo
+# TODO: Check oned is ee otherwise Prometheus could not exist
+- name: Clone opennebula-extensions GitHub repository
   ansible.builtin.git:
-    repo: https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine.git
-    dest: "{{ engine_repo }}"
-    force: true
+    repo: https://github.com/SovereignEdgeEU-COGNIT/opennebula-extensions.git
+    dest: "{{ extensions_repo }}"
+  delegate_to: localhost
+  run_once: true
 
-- name: Install Ruby
-  become: true
-  block:
-    - name: Install required packages
-      ansible.builtin.apt:
-        name:
-          - ruby
-          - ruby-dev
-          - build-essential
-          - zlib1g-dev
-        state: present
-        update_cache: true
+- name: Prometheus - Patch 1
+  ansible.builtin.copy:
+    src: "{{ extensions_repo }}/prometheus/patch_datasources.rb"
+    dest: /usr/share/one/patch_datasources.rb
+    owner: root
+    group: root
+    mode: '0644'
 
-- name: Install engine
-  ansible.builtin.command:
-    cmd: "./install.sh"
-    chdir: "{{ engine_repo }}"
+- name: Prometheus - Patch 2
+  ansible.builtin.copy:
+    src: "{{ extensions_repo }}/prometheus/vm_collector.rb"
+    dest: /usr/lib/one/opennebula_exporter/opennebula_vm_collector.rb
+    owner: root
+    group: root
+    mode: '0644'
 
-- name: Set the frontend to listen on every host
-  lineinfile:
-    path: /etc/provision-engine/engine.conf
-    regexp: '^:host:'
-    line: ':host: 0.0.0.0'
+- name: Prometheus - VM Hook
+  ansible.builtin.command: "onehook create {{ extensions_repo }}/prometheus/vm.hook"
+  register: hook_result
+  failed_when: hook_result.rc != 0
+  changed_when: hook_result.rc == 0
 
-- name: Point Engine to frontend
-  ansible.builtin.command:
-    cmd: "./prepare.rb {{ oned }} {{ oneflow }}"
-    chdir: "{{ engine_repo }}/tests"
+- name: Geolocation - Logic
+  ansible.builtin.copy:
+    src: "{{ extensions_repo }}/geolocation/geo.rb"
+    dest: /usr/share/one/geo.rb
+    owner: root
+    group: root
+    mode: '0644'
 
-- name: Start engine
-  ansible.builtin.command: provision-engine-server start
-  ignore_errors: true
-
-- name: Check if engine port is being used
-  ansible.builtin.wait_for:
-    port: 1337
-    timeout: 5
+- name: Geolocation - VM Hook
+  ansible.builtin.command: "onehook create {{ extensions_repo }}/geolocation/geo.hook"
+  register: hook_result
+  failed_when: hook_result.rc != 0
+  changed_when: hook_result.rc == 0
