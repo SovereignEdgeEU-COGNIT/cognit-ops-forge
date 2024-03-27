@@ -1,69 +1,143 @@
-# Import SR App image
-resource "opennebula_image" "sr_app" {
-  name         = "SR App"
-  description  = "Serverless Runtime Appliance"
-  datastore_id = 1
-  persistent   = false
-  # TODO: This is TTYLinux, replace with SR build output
-  path       = "https://marketplace.opennebula.io/appliance/154f6edf-47dc-4bcb-af77-e55c7d31e945/download/0"
-  dev_prefix = "vd"
-  driver     = "qcow2"
+module "opennebula_image_base" {
+  source      = "./modules/app"
+  name        = "SR"
+  description = "Serverless Runtime base appliance"
+  path        = var.image_base
+  providers = {
+    opennebula = opennebula
+  }
 }
 
-# Create Function VM Template
-resource "opennebula_template" "faas" {
+module "opennebula_image_Cybersec" {
+  source      = "./modules/app"
+  name        = "Cybersec"
+  description = "Serverless Runtime appliance for Cybersecurity"
+  path        = var.image_Cybersec
+  providers = {
+    opennebula = opennebula
+  }
+}
+
+module "opennebula_image_Energy" {
+  source      = "./modules/app"
+  name        = "Energy"
+  description = "Serverless Runtime appliance for Energy"
+  path        = var.image_Energy
+  providers = {
+    opennebula = opennebula
+  }
+}
+
+module "opennebula_image_Nature" {
+  source      = "./modules/app"
+  name        = "SR Nature"
+  description = "Serverless Runtime appliance for Nature"
+  path        = var.image_Nature
+  providers = {
+    opennebula = opennebula
+  }
+}
+
+module "opennebula_image_SmartCity" {
+  source      = "./modules/app"
+  name        = "SR SmartCity"
+  description = "Serverless Runtime appliance for SmartCity"
+  path        = var.image_SmartCity
+  providers = {
+    opennebula = opennebula
+  }
+}
+
+module "opennebula_template_base" {
+  source      = "./modules/vm_template"
   name        = "FaaS"
-  description = "Serverless Runtime Function as a Service"
-  cpu         = 1
-  memory      = 1024
-
-  context = {
-    NETWORK             = "YES"
-    HOSTNAME            = "$NAME"
-    READY_SCRIPT        = "ss -tln src :8000  | grep 8000"
-    REPORT_READY        = "YES"
-    SSH_PUBLIC_KEY      = "$USER[SSH_PUBLIC_KEY]"
-    START_SCRIPT_BASE64 = "Y2QgL3Jvb3Qvc2VydmVybGVzcy1ydW50aW1lCmdpdCBjaGVja291dCBzcl9wcm9tX21ldHJpY3MKc291cmNlIHNlcnZlcmxlc3MtZW52L2Jpbi9hY3RpdmF0ZSAKY2QgYXBwCnB5dGhvbjMgbWFpbi5weSAm"
-    TOKEN               = "YES"
+  description = "Serverless Runtime FAAS instance template"
+  image_id    = module.opennebula_image_base.id
+  providers = {
+    opennebula = opennebula
   }
-
-  graphics {
-    type   = "VNC"
-    listen = "0.0.0.0"
-  }
-
-  os {
-    arch = "x86_64"
-    boot = "disk0"
-  }
-
-  disk {
-    image_id = opennebula_image.sr_app.id
-  }
-
-  tags = {
-    PROMETHEUS_EXPORTER = 9100
-  }
-
 }
 
-resource "opennebula_service_template" "faas" {
-  name = "FaaS"
-  template = <<EOF
-    {
-      "TEMPLATE": {
-        "BODY": {
-          "name": "FaaS",
-          "deployment": "straight",
-          "roles": [
-            {
-              "name": "FaaS",
-              "cardinality": 1,
-              "vm_template": ${opennebula_template.faas.id}
-            }
-          ]
-        }
-      }
-    }
-  EOF
+module "opennebula_template_Cybersec" {
+  source      = "./modules/vm_template"
+  name        = "Cybersec"
+  description = "Serverless Runtime FAAS instance template for Cybersecurity"
+  image_id    = module.opennebula_image_Cybersec.id
+  providers = {
+    opennebula = opennebula
+  }
 }
+
+module "opennebula_template_Energy" {
+  source      = "./modules/vm_template"
+  name        = "Energy"
+  description = "Serverless Runtime FAAS instance template for Energy"
+  image_id    = module.opennebula_image_Energy.id
+  providers = {
+    opennebula = opennebula
+  }
+}
+module "opennebula_template_Nature" {
+  source      = "./modules/vm_template"
+  name        = "Nature"
+  description = "Serverless Runtime FAAS instance template for Nature"
+  image_id    = module.opennebula_image_Nature.id
+  providers = {
+    opennebula = opennebula
+  }
+}
+module "opennebula_template_SmartCity" {
+  source      = "./modules/vm_template"
+  name        = "SmartCity"
+  description = "Serverless Runtime FAAS instance template for SmartCity"
+  image_id    = module.opennebula_image_SmartCity.id
+  providers = {
+    opennebula = opennebula
+  }
+}
+module "opennebula_service_template_base" {
+  source              = "./modules/service_template/"
+  name                = "Function"
+  faas_vm_template_id = module.opennebula_template_base.id
+  providers = {
+    opennebula = opennebula
+  }
+}
+
+module "opennebula_service_template_Cybersec" {
+  source              = "./modules/service_template/"
+  name                = "Cybersec"
+  faas_vm_template_id = module.opennebula_template_Cybersec.id
+  providers = {
+    opennebula = opennebula
+  }
+}
+
+module "opennebula_service_template_Energy" {
+  source              = "./modules/service_template/"
+  name                = "Energy"
+  faas_vm_template_id = module.opennebula_template_Energy.id
+  providers = {
+    opennebula = opennebula
+  }
+}
+
+module "opennebula_service_template_Nature" {
+  source              = "./modules/service_template/"
+  name                = "Nature"
+  faas_vm_template_id = module.opennebula_template_Nature.id
+  providers = {
+    opennebula = opennebula
+  }
+}
+
+module "opennebula_service_template_SmartCity" {
+  source              = "./modules/service_template/"
+  name                = "SmartCity"
+  faas_vm_template_id = module.opennebula_template_SmartCity.id
+  providers = {
+    opennebula = opennebula
+  }
+}
+
+

@@ -208,8 +208,6 @@ def clean
         File.delete("#{__dir__}/ansible/#{file}")
     end
 
-    FileUtils.rm_rf('/var/tmp/opennebula-extensions')
-
     File.delete("#{__dir__}/opsforge.log")
 
     puts 'COGNIT deployment succesfully destroyed'
@@ -221,7 +219,7 @@ def cmd_exec(cmd, log = true)
     o, e, s = Open3.capture3(cmd)
 
     if s != 0
-        STDERR.puts "Command \"#{cmd}\" failed:"
+        STDERR.puts "Command \"#{cmd}\" failed:" if log
         raise "#{o}\n#{e}"
     end
 
