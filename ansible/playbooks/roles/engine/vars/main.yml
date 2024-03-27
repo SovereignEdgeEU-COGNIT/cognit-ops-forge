@@ -1,2 +1,3 @@
 ---
-engine_repo: /home/ubuntu/provision-engine
+repo_url: https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine.git
+repo_dest: /home/ubuntu/provision-engine

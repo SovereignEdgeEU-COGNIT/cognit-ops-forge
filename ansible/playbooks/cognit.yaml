@@ -1,6 +1,23 @@
 ---
 - name: Setup frontend
   ansible.builtin.import_playbook: opennebula.deploy.main
+- name: Setup external scheduler
+  hosts: "{{ frontend_group | d('frontend') }}"
+  tasks:
+    - name: Add external scheduler configuration
+      ansible.builtin.blockinfile:
+        path: /etc/one/sched.conf
+        block: |
+          EXTERNAL_SCHEDULER = [
+              SERVER = "{{ external_scheduler }}",
+              PROXY = "",
+              TIMEOUT = 10
+          ]
+
+    - name: Restart opennebula-scheduler service
+      ansible.builtin.systemd:
+        name: opennebula-scheduler
+        state: restarted
 - name: Setup provision-engine
   hosts: "{{ engine_group | d('engine') }}"
   roles:
@@ -9,3 +26,7 @@
   hosts: "{{ frontend_group | d('frontend') }}"
   roles:
     - opennebula-extensions
+- name: Setup ai-orchestrator
+  hosts: "{{ ai_group | d('ai') }}"
+  roles:
+    - ai

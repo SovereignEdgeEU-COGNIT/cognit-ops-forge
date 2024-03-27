@@ -113,6 +113,7 @@ resource "aws_instance" "ai" {
   }
   subnet_id                   = aws_subnet.cognit.id
   key_name                    = var.aws_ssh_key
+  vpc_security_group_ids      = [aws_security_group.ai.id]
   associate_public_ip_address = true
   connection {
     type        = "ssh"
@@ -204,6 +205,27 @@ resource "aws_security_group" "engine" {
   }
 }
 
+# Security Group for AI Orchestrator
+resource "aws_security_group" "ai" {
+  vpc_id = aws_vpc.opsforge.id
+
+  # Allow all outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow SSH from anywhere
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 # Security Group Rule for Engine to Frontend (oned)
 resource "aws_security_group_rule" "engine_to_frontend_oned" {
   type              = "ingress"
@@ -219,6 +241,16 @@ resource "aws_security_group_rule" "engine_to_frontend_oneflow" {
   type              = "ingress"
   from_port         = 2474
   to_port           = 2474
+  protocol          = "tcp"
+  security_group_id = aws_security_group.frontend.id
+  cidr_blocks       = [aws_subnet.cognit.cidr_block] # Allow from the cognit subnet
+}
+
+# Security Group Rule for AI-Orchestrator to Frontend
+resource "aws_security_group_rule" "external_scheduler" {
+  type              = "ingress"
+  from_port         = 4567
+  to_port           = 4567
   protocol          = "tcp"
   security_group_id = aws_security_group.frontend.id
   cidr_blocks       = [aws_subnet.cognit.cidr_block] # Allow from the cognit subnet

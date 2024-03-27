@@ -1,8 +1,8 @@
 ---
 - name: Clone Provigion Engine repo
   ansible.builtin.git:
-    repo: https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine.git
-    dest: "{{ engine_repo }}"
+    repo:  "{{ repo_url }}"
+    dest: "{{ repo_dest }}"
     force: true
 
 - name: Install Ruby
@@ -21,7 +21,7 @@
 - name: Install engine
   ansible.builtin.command:
     cmd: "./install.sh"
-    chdir: "{{ engine_repo }}"
+    chdir: "{{ repo_dest }}"
 
 - name: Set the engine to listen on every host
   lineinfile:
@@ -32,7 +32,7 @@
 - name: Point Engine to frontend
   ansible.builtin.command:
     cmd: "./prepare.rb {{ oned }} {{ oneflow }}"
-    chdir: "{{ engine_repo }}/tests"
+    chdir: "{{ repo_dest }}/tests"
 
 - name: Start engine
   ansible.builtin.command: provision-engine-server start

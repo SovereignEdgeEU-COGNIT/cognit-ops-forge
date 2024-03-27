@@ -71,7 +71,7 @@ end
 # TODO: Engine port
 # TODO: baremetal deployment
 def ansible(infra, opsforge_template)
-    puts 'Installing Frontend and Provisioning Engine'
+    puts 'Installing Frontend, Provisioning Engine and AI Orchestrator'
 
     inventory = {
         'frontend' => {
@@ -81,6 +81,7 @@ def ansible(infra, opsforge_template)
                 }
             },
             'vars' => {
+                'external_scheduler' => "http://#{infra[:ai_orchestrator]}:4567",
                 'one_version' => opsforge_template[:one][:version],
                 'one_pass' => opsforge_template[:one][:password],
                 'features' => {
@@ -117,6 +118,13 @@ def ansible(infra, opsforge_template)
             'vars' => {
                 'oned' => "http://#{infra[:frontend]}:2633/RPC2",
                 'oneflow' => "http://#{infra[:frontend]}:2474"
+            }
+        },
+        'ai' => {
+            'hosts' => {
+                'a1' => {
+                    'ansible_host' => infra[:ai_orchestrator]
+                }
             }
         }
     }
@@ -291,7 +299,7 @@ when 'deploy'
 
     report = <<~EOT
 
-        Infrastructure
+        [INFO] Infrastructure
         #{JSON.pretty_generate(infra)}
 
         [INFO] Connect to these hosts with the <ubuntu> user using the provided ssh key'
