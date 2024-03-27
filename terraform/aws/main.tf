@@ -246,9 +246,9 @@ resource "aws_security_group_rule" "engine_to_frontend_oneflow" {
   cidr_blocks       = [aws_subnet.cognit.cidr_block] # Allow from the cognit subnet
 }
 
-# Security Group Rule for AI-Orchestrator to Frontend
+# Security Group Rule for Frontend to AI Orchestrator
 resource "aws_security_group_rule" "external_scheduler" {
-  type              = "ingress"
+  type              = "egress"
   from_port         = 4567
   to_port           = 4567
   protocol          = "tcp"
