@@ -4,12 +4,12 @@
   ansible.builtin.git:
     repo: https://github.com/SovereignEdgeEU-COGNIT/opennebula-extensions.git
     dest: "{{ extensions_repo }}"
-  delegate_to: localhost
   run_once: true
 
 - name: Prometheus - Patch 1
   ansible.builtin.copy:
     src: "{{ extensions_repo }}/prometheus/patch_datasources.rb"
+    remote_src: true
     dest: /usr/share/one/patch_datasources.rb
     owner: root
     group: root
@@ -18,6 +18,7 @@
 - name: Prometheus - Patch 2
   ansible.builtin.copy:
     src: "{{ extensions_repo }}/prometheus/vm_collector.rb"
+    remote_src: true
     dest: /usr/lib/one/opennebula_exporter/opennebula_vm_collector.rb
     owner: root
     group: root
@@ -32,6 +33,7 @@
 - name: Geolocation - Logic
   ansible.builtin.copy:
     src: "{{ extensions_repo }}/geolocation/geo.rb"
+    remote_src: true
     dest: /usr/share/one/geo.rb
     owner: root
     group: root
@@ -42,3 +44,8 @@
   register: hook_result
   failed_when: hook_result.rc != 0
   changed_when: hook_result.rc == 0
+
+- name: Delete opennebula-extensions GitHub repository
+  file:
+    path: "{{ extensions_repo }}"
+    state: absent
