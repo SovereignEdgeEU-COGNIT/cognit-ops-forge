@@ -8,11 +8,11 @@ Currently it is ready to automatically deploy the following components:
 
 - [OpenNebula Frontend node](https://docs.opennebula.io/STS/installation_and_configuration/frontend_installation/overview.html)
 - [Provision Engine](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine)
+- [Serverless Runtime](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime)
 
-The missing components that need to be deployed manually are, please follow the links to learn how to install them:
+The missing components that need to be deployed manually are
 
 - [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator). opsforge will create an instance dedicated to the AI Orchestration role. The installation should be done manually for the time being.
-- [Serverless Runtime](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime). opsforge will create content inside OpenNebula, like VM and Service Templates that reference the Serverless Runtime workload. The Serverless Runtime application should be manually uploaded to the OpenNebula datastores for the time being.
 
 Also you'll need a device client to make use of the infrastructure from your application
 
@@ -33,8 +33,8 @@ opsforge is a CLI application that runs in your local machine. It will
 As such, there are some requirements that need to be met in order to run the program
 
 - [ruby](https://www.ruby-lang.org/en/documentation/installation/)
-- [terraform](https://developer.hashicorp.com/terraform/install?product_intent=terraform)
 - [awscli](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+- [terraform](https://developer.hashicorp.com/terraform/install?product_intent=terraform)
 - [ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
 - a valid [ssh key](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) to connect to AWS EC2 instances
 
@@ -57,6 +57,8 @@ Template contents in yaml format
   :version: 6.8 # OpenNebula version to install. Defaults to 6.8 if missing
   :password: "opennebula" # password for the oneadmin user. Defaults to opennebula if missing
   :ee_token: <your_ee_token> # OpenNebula Enterprise Edition token. If missing Prometheus integration will not exist.
+:cognit:
+  :engine_port: 1337 # The port where the Provisioning Engine will be bound to onits instance. Defaults to 1337.
 ```
 
 When finished, you should receive information about how to connect to each instance. For example
@@ -64,23 +66,27 @@ When finished, you should receive information about how to connect to each insta
 ```
 Setting up infrastructure on AWS
 Infrastructure on AWS has been deployed
-Took 16.729304 seconds
+Took 60.673237 seconds
 Installing Frontend and Provisioning Engine
 Frontend and Provisioning Engine installed
-Took 74.6311 seconds
+Took 402.92903 seconds
 Setting up Frontend for Cognit
 Frontend ready for Cognit
-Took 3.686645 seconds
-Took 2.7e-05 seconds
+Took 29.167263 seconds
+
+Infrastructure
 {
-  "frontend": "ec2-3-81-149-9.compute-1.amazonaws.com",
-  "engine": "ec2-35-173-132-188.compute-1.amazonaws.com",
-  "ai_orchestrator": "ec2-52-90-15-180.compute-1.amazonaws.com"
+  "frontend": "ec2-18-210-28-170.compute-1.amazonaws.com",
+  "engine": "ec2-44-221-73-110.compute-1.amazonaws.com",
+  "ai_orchestrator": "ec2-3-230-155-179.compute-1.amazonaws.com"
 }
 
-Logs available at ./opsforge.log'
-Take a look at AWS cluster provisioning in order to setup your KVM cluster
-https://docs.opennebula.io/6.8/provision_clusters/providers/aws_provider.html#aws-provider
+[INFO] Connect to these hosts with the <ubuntu> user using the provided ssh key'
+[INFO] Logs available at ./opsforge.log'
+[POSTINSTALL] Take a look at AWS cluster provisioning in order to setup your KVM cluster
+https://docs.opennebula.org/stable/provision_clusters/providers/aws_provider.html#aws-provider
+[POSTINSTALL] After that, take a look at the Energy Consumption extension
+https://github.com/SovereignEdgeEU-COGNIT/opennebula-extensions?tab=readme-ov-file#scaphandre-extension
 ```
 
 ##  Terminate
