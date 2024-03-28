@@ -109,6 +109,14 @@ def ansible(infra, opsforge_template)
                 }
             }
         },
+        # TODO: Enable ai entry inventory after instructions have been verified by AI team
+        # 'ai' => {
+        #     'hosts' => {
+        #         'a1' => {
+        #             'ansible_host' => infra[:ai_orchestrator]
+        #         }
+        #     }
+        # },
         'engine' => {
             'hosts' => {
                 'e1' => {
@@ -118,13 +126,6 @@ def ansible(infra, opsforge_template)
             'vars' => {
                 'oned' => "http://#{infra[:frontend]}:2633/RPC2",
                 'oneflow' => "http://#{infra[:frontend]}:2474"
-            }
-        },
-        'ai' => {
-            'hosts' => {
-                'a1' => {
-                    'ansible_host' => infra[:ai_orchestrator]
-                }
             }
         }
     }
