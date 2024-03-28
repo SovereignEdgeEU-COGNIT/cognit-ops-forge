@@ -5,6 +5,7 @@ require 'open3'
 require 'json'
 require 'net/http'
 require 'fileutils'
+require 'securerandom'
 
 HELP = <<~EOT
     opsforge CLI options
@@ -66,10 +67,6 @@ def terraform_aws(opsforge_template)
     return ec2_instances
 end
 
-# TODO: Sunstone port
-# TODO: FireEdge port
-# TODO: Engine port
-# TODO: baremetal deployment
 def ansible(infra, opsforge_template)
     puts 'Installing Frontend, Provisioning Engine and AI Orchestrator'
 
@@ -125,7 +122,8 @@ def ansible(infra, opsforge_template)
             },
             'vars' => {
                 'oned' => "http://#{infra[:frontend]}:2633/RPC2",
-                'oneflow' => "http://#{infra[:frontend]}:2474"
+                'oneflow' => "http://#{infra[:frontend]}:2474",
+                'port' => opsforge_template[:cognit][:engine_port]
             }
         }
     }
@@ -134,6 +132,10 @@ def ansible(infra, opsforge_template)
         inventory['frontend']['vars']['one_token'] = opsforge_template[:one][:ee_token]
         inventory['frontend']['vars']['features']['prometheus'] = true
     end
+
+    inventory['frontend']['vars']['fireedge_port'] = opsforge_template[:one][:fireedge_port] if opsforge_template[:one][:fireedge_port]
+    inventory['frontend']['vars']['sunstone_port'] = opsforge_template[:one][:sunstone_port] if opsforge_template[:one][:sunstone_port]
+    inventory['engine']['vars']['engine_port'] = opsforge_template[:cognit][:engine_port] if opsforge_template[:cognit][:engine_port]
 
     inventory = inventory.to_yaml
 
@@ -300,6 +302,7 @@ case ARGV[0]
 when 'deploy'
     opsforge_template = YAML.load_file(ARGV[1])
     validate_template(opsforge_template)
+    opsforge_template[:one][:password] = SecureRandom.alphanumeric
 
     infra = nil
 

@@ -18,6 +18,24 @@
       ansible.builtin.systemd:
         name: opennebula-scheduler
         state: restarted
+    - name: Update FireEdge Port
+      ansible.builtin.lineinfile:
+        path: /etc/one/fireedge-server.conf
+        regexp: '^port:\s*\d+$'
+        line: "port: {{ fireedge_port }}"
+    - name: Restart opennebula-fireedge service
+      ansible.builtin.systemd:
+        name: opennebula-fireedge
+        state: restarted
+    - name: Update Sunstone Port
+      ansible.builtin.lineinfile:
+        path: /etc/one/sunstone-server.conf
+        regexp: '^:port:\s*\d+$'
+        line: ":port: {{ sunstone_port }}"
+    - name: Restart opennebula-sunstone service
+      ansible.builtin.systemd:
+        name: opennebula-sunstone
+        state: restarted
 - name: Setup provision-engine
   hosts: "{{ engine_group | d('engine') }}"
   roles:

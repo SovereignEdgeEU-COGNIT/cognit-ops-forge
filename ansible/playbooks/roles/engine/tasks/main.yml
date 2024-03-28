@@ -29,6 +29,12 @@
     regexp: '^:host:'
     line: ':host: 0.0.0.0'
 
+- name: Set the engine port
+  lineinfile:
+    path: /etc/provision-engine/engine.conf
+    regexp: '^:port:'
+    line: ":port: {{ engine_port }}"
+
 - name: Point Engine to frontend
   ansible.builtin.command:
     cmd: "./prepare.rb {{ oned }} {{ oneflow }}"
@@ -40,5 +46,5 @@
 
 - name: Check if engine port is being used
   ansible.builtin.wait_for:
-    port: 1337
+    port: "{{ port }}"
     timeout: 5
