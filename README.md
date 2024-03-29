@@ -27,9 +27,10 @@ opsforge is a ruby CLI application that runs in your local machine. It will
 
 As such, there are some requirements that need to be met in order to run the program
 
-- [ruby](https://www.ruby-lang.org/en/documentation/installation/)
+- [ruby](https://www.ruby-lang.org/en/documentation/installation/) and the gem [json-schema](https://rubygems.org/gems/json-schema)
 - [terraform](https://developer.hashicorp.com/terraform/install?product_intent=terraform)
 - [ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html)
+  - [one-deploy](https://github.com/OpenNebula/one-deploy/releases/tag/release-1.0.0) is a required git submodule
 - If using AWS
   - [awscli](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
   - a valid [ssh key](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) to connect to AWS EC2 instances
@@ -40,29 +41,25 @@ You can deploy the COGNIT Stack on AWS or on specific hosts for each component
 
 Run `./opsforge deploy <opsforge_template>`
 
+To check all of the options available for the opsforge template, please refer to [the template schema](./schema.json).
+
 #### AWS
 
-The deployment will create it's own VPC, Internet Gateway and subnets with the proper network configuration for the EC2 instances to communicate with each other. It can be done in any region.
+The deployment will create it's own VPC, Internet Gateway, subnets and Security Groups with the proper network configuration for the EC2 instances to communicate with each other and the internet. It can be done in any region as long as the instance type requested is available in it.
 
 Example
 
 ```yaml
 :aws:
-  :region: "us-east-1" # Defaults to eu-central-1 if missing
-  :instance_type: t2.medium # EC2 instance type. Defaults to t2.medium if missing
-  :volume_size: 125 # EBS size for EC2 instances. Defaults to 125 if missing
-  :ssh_key: <ssh_user> # MANDATORY. your SSH key on AWS on the key list when creating an EC2 instance
-  :ssh_key_path: "~/.ssh/id_rsa" # private SSH key path on your local machine. Defaults to ~/.ssh/id_rsa if missing
+  :region: "us-east-1"
+  :ssh_key: <your_aws_named_ssh_key>
 :one:
-  :version: 6.8 # OpenNebula version to install. Defaults to 6.8 if missing
-  :ee_token: <your_ee_token> # OpenNebula Enterprise Edition token. If missing Prometheus integration will not exist.
-:cognit:
-  :engine_port: 1337 # port where the Provisioning Engine will be bound to onits instance. Defaults to 1337.
+  :ee_token: <your_ee_token>
 ```
 
 When finished, you should receive information about how to connect to each instance. For example
 
-```
+```json
 Setting up infrastructure on AWS
 Infrastructure on AWS has been deployed
 Took 60.673237 seconds
@@ -96,16 +93,15 @@ Example
 
 ```yaml
 :one:
-  :version: 6.8 # OpenNebula version to install. Defaults to 6.8 if missing
-  :ee_token: <your_ee_token> # OpenNebula Enterprise Edition token. If missing Prometheus integration will not exist.
-  :sunstone_port: 80 # OpenNebula's main Web UI port
-  :fireedge_port: 443 # OpenNebula's next gen UI port
-:hosts: # hostnames where each host will be deployed
+  :ee_token: <your_ee_token>
+  :sunstone_port: 80
+  :fireedge_port: 443
+:hosts:
     :frontend: 172.20.0.4
     :engine: 172.20.0.9
     :ai_orchestrator: 172.20.17
 :cognit:
-  :engine_port: 6969 # port where the Provisioning Engine will be bound to onits instance. Defaults to 1337.
+  :engine_port: 6969
 ```
 
 ##  Terminate

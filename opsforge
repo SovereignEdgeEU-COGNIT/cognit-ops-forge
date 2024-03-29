@@ -6,6 +6,7 @@ require 'json'
 require 'net/http'
 require 'fileutils'
 require 'securerandom'
+require 'json-schema'
 
 HELP = <<~EOT
     opsforge CLI options
@@ -31,8 +32,11 @@ def verify_deployment(infra, opsforge_template)
     # Check engine -> oneflow
 end
 
-# TODO: create a schema for opsforge template and validate it
-def validate_template(opsforge_template); end
+def validate_template(opsforge_template)
+    schema = YAML.load_file("#{__dir__}/schema.json")
+
+    JSON::Validator.validate!(schema, opsforge_template)
+end
 
 def terraform_aws(opsforge_template)
     puts 'Setting up infrastructure on AWS'
@@ -133,9 +137,12 @@ def ansible(infra, opsforge_template)
         inventory['frontend']['vars']['features']['prometheus'] = true
     end
 
-    inventory['frontend']['vars']['fireedge_port'] = opsforge_template[:one][:fireedge_port] if opsforge_template[:one][:fireedge_port]
-    inventory['frontend']['vars']['sunstone_port'] = opsforge_template[:one][:sunstone_port] if opsforge_template[:one][:sunstone_port]
-    inventory['engine']['vars']['engine_port'] = opsforge_template[:cognit][:engine_port] if opsforge_template[:cognit][:engine_port]
+    inventory['frontend']['vars']['fireedge_port'] =
+        opsforge_template[:one][:fireedge_port] if opsforge_template[:one][:fireedge_port]
+    inventory['frontend']['vars']['sunstone_port'] =
+        opsforge_template[:one][:sunstone_port] if opsforge_template[:one][:sunstone_port]
+    inventory['engine']['vars']['engine_port'] =
+        opsforge_template[:cognit][:engine_port] if opsforge_template[:cognit][:engine_port]
 
     inventory = inventory.to_yaml
 
@@ -301,10 +308,16 @@ verify_requirements
 case ARGV[0]
 when 'deploy'
     opsforge_template = YAML.load_file(ARGV[1])
-    validate_template(opsforge_template)
-    opsforge_template[:one][:password] = SecureRandom.alphanumeric
+
+    begin
+        validate_template(opsforge_template)
+    rescue JSON::Schema::ValidationError => e
+        puts e
+        exit 1
+    end
 
     infra = nil
+    opsforge_template[:one][:password] = SecureRandom.alphanumeric
 
     if opsforge_template.key?(:aws)
         howlong { infra = terraform_aws(opsforge_template) }

@@ -1,0 +1,95 @@
+{
+  "type": "object",
+  "properties": {
+    "one": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "number",
+          "description": "OpenNebula version to install",
+          "default": 6.8
+        },
+        "ee_token": {
+          "type": "string",
+          "description": "OpenNebula Enterprise Edition Token"
+        },
+        "sunstone_port": {
+          "type": "integer",
+          "description": "OpenNebula stable Web GUI port",
+          "default": 9869
+        },
+        "fireedge_port": {
+          "type": "integer",
+          "description": "OpenNebula next gen Web UI port",
+          "default": 2616
+        }
+      },
+      "required": ["ee_token"]
+    },
+    "cognit": {
+      "type": "object",
+      "properties": {
+        "engine_port": {
+          "type": "integer",
+          "description": "Provisioning Engine port",
+          "default": 1337
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "aws": {
+          "type": "object",
+          "properties": {
+            "instance_type": {
+              "type": "string",
+              "description": "EC2 instance types used to deploy the COGNIT components",
+              "default": "t2.medium"
+            },
+            "volume_size": {
+              "type": "integer",
+              "description": "EBS root volume size for the EC2 instances",
+              "default": 125
+            },
+            "region": {
+              "type": "string",
+              "description": "AWS region used for the deployment",
+              "default": "eu-central-1"
+            },
+            "ssh_key": {
+              "type": "string",
+              "description": "Name of the SSH in AWS key that will be used to connect to the EC2 instances",
+            }
+          },
+          "required": ["ssh_key"]
+        }
+      },
+      "required": ["aws"]
+    },
+    {
+      "properties": {
+        "hosts": {
+          "type": "object",
+          "properties": {
+            "frontend": {
+              "type": "string",
+              "description": "Hostname/IP of the machine where the COGNIT component in question will be deployed to"
+            },
+            "engine": {
+              "type": "string",
+              "description": "Hostname/IP of the machine where the COGNIT component in question will be deployed to"
+            },
+            "ai_orchestrator": {
+              "type": "string",
+              "description": "Hostname/IP of the machine where the COGNIT component in question will be deployed to"
+            }
+          },
+          "required": ["frontend", "engine", "ai_orchestrator"]
+        }
+      },
+      "required": ["hosts"]
+    }
+  ]
+}
