@@ -1,15 +1,29 @@
 # COGNIT OpsForge
 
-A Cognitive Serverless Framework for the Cloud-Edge Continuum. With OpsForge you can deploy the COGNIT Stack.
+OpsForge let's you deploy the COGNIT Stack in a target infrastructure, turning it into a Cognitive Serverless Framework for the Cloud-Edge Continuum.  
 
 ![Alt text](images/cognit_arch.png)
 
-It will automatically deploy setup the following components on AWS or on the specified hosts
+The COGNIT Stack is built using the following components:
 
-- [OpenNebula Frontend node](https://docs.opennebula.io/STS/installation_and_configuration/frontend_installation/overview.html)
+| Name               | Documentation                                                                                                 | Testing                                                                                                        | Installation                                                                                                               |
+|--------------------|---------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|
+| Device Client      |                                                                                                               |                                                                                                                |                                                                                                                            |
+| OpenNebula         | [Official](https://docs.opennebula.io/)                                                                       | [Q&A](https://github.com/OpenNebula/one/wiki/Quality-Assurance)                                                | [Install guide](https://docs.opennebula.io/6.8/installation_and_configuration/frontend_installation/index.html)            |
+| Serverless Runtime |                                                                                                               |                                                                                                                |                                                                                                                            |
+| Provision Engine   | [User guide](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine/wiki/User-Guide)                   | [GitHub Actions](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine/actions/workflows/rspec.yaml)   | [Admin guide](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine/wiki/Admin-Guide)                              |
+| Device Client      |                                                                                                               |                                                                                                                |                                                                                                                            |
+
+OpsForge will automatically deploy and configure the following components on the target infrastructure:
+
+- [OpenNebula Frontend node](https://docs.opennebula.io/STS/installation_and_configuration/frontend_installation/overview.html). All needed resources, like the Serverless Runtime templates, are created.
 - [Provision Engine](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine)
-- [Serverless Runtime](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime)
-- [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator)
+- [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator) (only the initial configuration)
+  
+Afterwards you will need to manually 
+
+- [Serverless Runtime](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime). Currently OpsForge deploy a dummy image that needs to be replaced with a valid SR.
+- [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator) (component needs to be configured manually)
 
 Also you'll need a device client to make use of the infrastructure from your application
 
@@ -19,13 +33,13 @@ Also you'll need a device client to make use of the infrastructure from your app
 
 ## How to use
 
-opsforge is a ruby CLI application that runs in your local machine. It will
+OpsForge is a ruby CLI application that runs in your local machine. It will:
 
 - setup AWS infrastructure using terraform if required
 - install and configure OpenNebula and the COGNIT services using ansible
 - populate the frontend with content required by the COGNIT use cases using the opennebula terraform provider
 
-As such, there are some requirements that need to be met in order to run the program
+As such, there are some requirements that need to be met in order to run the program:
 
 - [ruby](https://www.ruby-lang.org/en/documentation/installation/) and the gem [json-schema](https://rubygems.org/gems/json-schema)
 - [terraform](https://developer.hashicorp.com/terraform/install?product_intent=terraform)
@@ -37,13 +51,15 @@ As such, there are some requirements that need to be met in order to run the pro
 
 ### Deploy
 
-You can deploy the COGNIT Stack on AWS or on specific hosts for each component
+There are two kinds of target infrastructure that are valid for OpsForge, you can deploy the COGNIT Stack on AWS or on a private datacenter, provided SSH access to the resources.
 
-Run `./opsforge deploy <opsforge_template>`
+To run opsforge, you need to clone this repository and run `./opsforge deploy <opsforge_template>`
 
 To check all of the options available for the opsforge template, please refer to [the template schema](./schema.json).
 
 #### AWS
+
+![Alt text](images/cognit_arch.png)
 
 The deployment will create it's own VPC, Internet Gateway, subnets and Security Groups with the proper network configuration for the EC2 instances to communicate with each other and the internet. It can be done in any region as long as the instance type requested is available in it.
 
@@ -85,9 +101,11 @@ After that, take a look at the Energy Consumption extension
 https://github.com/SovereignEdgeEU-COGNIT/opennebula-extensions?tab=readme-ov-file#scaphandre-extension
 ```
 
-#### onprem
+#### On Premises (Private Datacenter)
 
-When deploying on specific hosts, the `:aws` key must not exist in the template, instead, specify each host hostname under the `:hosts` key. It is required to have root ssh access to said hosts.
+![Alt text](images/cognit_arch.png)
+
+When deploying on specific hosts, the `:aws` key must not exist in the template, instead, specify each host hostname under the `:hosts` key. It is **required** to have root ssh access to said hosts.
 
 Example
 
