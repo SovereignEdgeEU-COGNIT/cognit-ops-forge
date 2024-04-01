@@ -1,2 +1,3 @@
 ---
-extensions_repo: /var/tmp/opennebula-extensions
+repo_url: https://github.com/SovereignEdgeEU-COGNIT/opennebula-extensions.git
+repo_dest: /var/tmp/opennebula-extensions

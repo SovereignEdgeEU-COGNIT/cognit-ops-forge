@@ -1,0 +1,59 @@
+---
+- name: Install pip
+  ansible.builtin.apt:
+    name: python3-pip
+    state: present
+    update_cache: true
+
+- name: Install required Python libraries
+  pip:
+    name: "{{ python_libraries }}"
+    state: present
+
+- name: Install Docker
+  apt:
+    name: docker.io
+    state: present
+
+- name: Ensure Docker is started and enabled
+  service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Clone AI Orchestrator repository
+  git:
+    repo: "{{ repo_url }}"
+    dest: "{{ repo_dest }}"
+
+
+- name: Build Docker container
+  docker_image:
+    name: python/vm_placement
+    source: "{{ repo_dest }}/src/VmAPI/vm-placement-simulator/Dockerfile"
+    build:
+      path: .
+
+- name: Run Docker container
+  docker_container:
+    name: vm_placement
+    image: python/vm_placement
+    state: started
+    detach: true
+    ports:
+      - "4567:4567"
+
+
+- name: Set ROCKET_ADDRESS environment variable
+  lineinfile:
+    path: /etc/environment
+    line: "ROCKET_ADDRESS=0.0.0.0"
+
+- name: Run System State Recorder
+  shell: "./staterec http://localhost:4567"
+  args:
+    chdir: "{{ repo_dest }}/src/system-state-recorder/bin"
+  async: 3600
+  poll: 0
+
+
