@@ -1,8 +1,8 @@
 # COGNIT OpsForge
 
-OpsForge let's you deploy the COGNIT Stack in a target infrastructure, turning it into a Cognitive Serverless Framework for the Cloud-Edge Continuum.  
+OpsForge let's you deploy the COGNIT Stack in a target infrastructure, turning it into a Cognitive Serverless Framework for the Cloud-Edge Continuum.
 
-![Alt text](images/cognit_arch.png)
+![Alt text](images/arch.png)
 
 The COGNIT Stack is built using the following components:
 
@@ -19,8 +19,8 @@ OpsForge will automatically deploy and configure the following components on the
 - [OpenNebula Frontend node](https://docs.opennebula.io/STS/installation_and_configuration/frontend_installation/overview.html). All needed resources, like the Serverless Runtime templates, are created.
 - [Provision Engine](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine)
 - [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator) (only the initial configuration)
-  
-Afterwards you will need to manually 
+
+Afterwards you will need to manually
 
 - [Serverless Runtime](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime). Currently OpsForge deploy a dummy image that needs to be replaced with a valid SR.
 - [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator) (component needs to be configured manually)
@@ -59,7 +59,7 @@ To check all of the options available for the opsforge template, please refer to
 
 #### AWS
 
-![Alt text](images/cognit_arch.png)
+![Alt text](images/aws.png)
 
 The deployment will create it's own VPC, Internet Gateway, subnets and Security Groups with the proper network configuration for the EC2 instances to communicate with each other and the internet. It can be done in any region as long as the instance type requested is available in it.
 
@@ -103,7 +103,7 @@ https://github.com/SovereignEdgeEU-COGNIT/opennebula-extensions?tab=readme-ov-fi
 
 #### On Premises (Private Datacenter)
 
-![Alt text](images/cognit_arch.png)
+![Alt text](images/onprem.png)
 
 When deploying on specific hosts, the `:aws` key must not exist in the template, instead, specify each host hostname under the `:hosts` key. It is **required** to have root ssh access to said hosts.
 
