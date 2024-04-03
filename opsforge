@@ -6,7 +6,13 @@ require 'json'
 require 'net/http'
 require 'fileutils'
 require 'securerandom'
+require 'socket'
+require 'timeout'
+
+# Gems
 require 'json-schema'
+
+ONE_VERSION = 6.8
 
 HELP = <<~EOT
     opsforge CLI options
@@ -25,11 +31,49 @@ end
 
 # TODO
 def verify_deployment(infra, opsforge_template)
-    # Check engine port reachable
-    # Check Sunstone port reachable
-    # Check FireEdge port reachable
-    # Check engine -> oned
-    # Check engine -> oneflow
+    # checks = {
+    #     :engine => {
+    #         :oned_reachable => false,
+    #         :oneflow_reachable => false,
+    #         :port => true
+    #     },
+    #     :cloud => {
+    #         :api => false,
+    #         :version => false,
+    #         :web_ports => {
+    #             :main => false,
+    #             :next_gen => false
+    #         },
+    #         :ai_orchestrator_reachable => false
+    #     }
+
+    # }
+
+    # engine_port = nil
+    # sunstone_port = nil
+    # fireedge_port = nil
+    # one_version = ONE_VERSION
+
+    # # Check provision Engine
+    # if opsforge_template[:cognit].key?(:engine)
+    #     engine_port = opsforge_template[:cognit][:engine][:port] || 1337
+    # end
+
+    # checks[:engine][:port] = true if socket?(infra[:engine], engine_port)
+
+    # # Check Cloud-Edge Manager
+    # if opsforge_template[:cognit][:cloud].key?(:web_ports)
+    #     sunstone_port = opsforge_template[:cognit][:cloud][:web_ports][:main] || 9869
+    #     fireedge_port = opsforge_template[:cognit][:cloud][:web_ports][:next_gen] || 2616
+    # end
+
+    # if opsforge_template[:cognit][:cloud].key?(:version)
+    #     one_version = opsforge_template[:cognit][:cloud][:version] || ONE_VERSION
+    # end
+
+    # checks[:cloud][:api] = true if socket?(infra[:cloud], 2633)
+    # checks[:cloud][:web_ports][:main] = true if socket?(infra[:cloud], sunstone_port)
+    # checks[:cloud][:web_ports][:next_gen] = true if socket?(infra[:cloud], fireedge_port)
 end
 
 def validate_template(opsforge_template)
@@ -41,28 +85,26 @@ end
 def terraform_aws(opsforge_template)
     puts 'Setting up infrastructure on AWS'
 
-    ec2_instances = {
-        :frontend => nil,
-        :engine => nil,
-        :ai_orchestrator => nil
-    }
-
     tfvars = "#{__dir__}/terraform/aws/terraform.tfvars"
     File.new(tfvars, 'w') unless File.exist?(tfvars)
 
-    File.open(tfvars, 'w') do |file|
-        file.puts("local_machine_ip = \"#{public_ip}\"")
+    tfvars_content = "local_machine_ip = \"#{public_ip}\"\n"
+    opsforge_template[:infra][:aws].each {|k, v| tfvars_content << "#{k} = \"#{v}\"\n" }
 
-        opsforge_template.each do |infra, conf|
-            conf.each do |setting, value|
-                file.puts("#{infra}_#{setting} = \"#{value}\"")
-            end
-        end
+    tfvars_content << "engine_port = #{opsforge_template[:cognit][:engine][:port]}\n" if opsforge_template[:cognit].key?(:engine) && opsforge_template[:cognit][:engine][:port]
+
+    if opsforge_template[:cognit].key?(:cloud) && opsforge_template[:cognit][:cloud].key?(:web_ports)
+        tfvars_content << "sunstone_port = #{opsforge_template[:cognit][:cloud][:web_ports][:main]}\n" if opsforge_template[:cognit][:cloud][:web_ports][:main]
+        tfvars_content << "fireedge_port = #{opsforge_template[:cognit][:cloud][:web_ports][:next_gen]}\n" if opsforge_template[:cognit][:cloud][:web_ports][:next_gen]
     end
+
+    File.open(tfvars, 'w') {|file| file.puts(tfvars_content) }
 
     infra = JSON.parse(terraform('aws').last)
 
-    ['frontend', 'engine', 'ai_orchestrator'].each do |ec2|
+    ec2_instances = {}
+
+    ['cloud', 'engine', 'ai_orchestrator'].each do |ec2|
         ec2_instances[ec2.to_sym] = infra[ec2]['value']
     end
 
@@ -72,21 +114,22 @@ def terraform_aws(opsforge_template)
 end
 
 def ansible(infra, opsforge_template)
-    puts 'Installing Frontend, Provisioning Engine and AI Orchestrator'
+    puts 'Installing Cloud-Edge Manager, Provisioning Engine and AI Orchestrator'
 
     inventory = {
         'frontend' => {
             'hosts' => {
                 'f1' => {
-                    'ansible_host' => infra[:frontend]
+                    'ansible_host' => infra[:cloud]
                 }
             },
             'vars' => {
+                'one_version' => opsforge_template[:cognit][:cloud][:version] || ONE_VERSION,
+                'one_pass' => opsforge_template[:cognit][:cloud][:password],
+                'one_token' => opsforge_template[:cognit][:cloud][:ee_token],
                 'external_scheduler' => "http://#{infra[:ai_orchestrator]}:4567",
-                'one_version' => opsforge_template[:one][:version],
-                'one_pass' => opsforge_template[:one][:password],
                 'features' => {
-                    'prometheus' => false,
+                    'prometheus' => true,
                     'gateproxy' => false
                 },
                 'vn' => {
@@ -116,7 +159,8 @@ def ansible(infra, opsforge_template)
         #         'a1' => {
         #             'ansible_host' => infra[:ai_orchestrator]
         #         }
-        #     }
+        #     },
+        #     'vars' => {}
         # },
         'engine' => {
             'hosts' => {
@@ -125,24 +169,31 @@ def ansible(infra, opsforge_template)
                 }
             },
             'vars' => {
-                'oned' => "http://#{infra[:frontend]}:2633/RPC2",
-                'oneflow' => "http://#{infra[:frontend]}:2474",
-                'port' => opsforge_template[:cognit][:engine_port]
+                'oned' => "http://#{infra[:cloud]}:2633/RPC2",
+                'oneflow' => "http://#{infra[:cloud]}:2474"
             }
         }
     }
 
-    if opsforge_template[:one][:ee_token]
-        inventory['frontend']['vars']['one_token'] = opsforge_template[:one][:ee_token]
-        inventory['frontend']['vars']['features']['prometheus'] = true
+    inventory['frontend']['vars']['one_extensions_version'] =
+        opsforge_template[:cognit][:cloud][:extensions][:version] if opsforge_template[:cognit][:cloud].key?(:extensions) && opsforge_template[:cognit][:cloud][:extensions][:version]
+
+    if opsforge_template[:cognit][:cloud].key?(:web_ports)
+        inventory['frontend']['vars']['fireedge_port'] =
+            opsforge_template[:cognit][:cloud][:web_ports][:next_gen] if opsforge_template[:cognit][:cloud][:web_ports].key?(:next_gen)
+        inventory['frontend']['vars']['sunstone_port'] =
+            opsforge_template[:cognit][:cloud][:web_ports][:main] if opsforge_template[:cognit][:cloud][:web_ports].key?(:main)
     end
 
-    inventory['frontend']['vars']['fireedge_port'] =
-        opsforge_template[:one][:fireedge_port] if opsforge_template[:one][:fireedge_port]
-    inventory['frontend']['vars']['sunstone_port'] =
-        opsforge_template[:one][:sunstone_port] if opsforge_template[:one][:sunstone_port]
-    inventory['engine']['vars']['engine_port'] =
-        opsforge_template[:cognit][:engine_port] if opsforge_template[:cognit][:engine_port]
+    if opsforge_template[:cognit].key?(:engine)
+        inventory['engine']['vars']['engine_port'] =
+            opsforge_template[:cognit][:engine][:port] if opsforge_template[:cognit][:engine][:port]
+        inventory['engine']['vars']['version'] =
+            opsforge_template[:cognit][:engine][:version] if opsforge_template[:cognit][:engine][:version]
+    end
+
+    # TODO
+    # inventory['ai']['vars']['version'] = opsforge_template[:cognit][:ai][:version] if opsforge_template[:cognit].key?(:ai) && opsforge_template[:cognit][:ai][:version]
 
     inventory = inventory.to_yaml
 
@@ -171,7 +222,7 @@ def ansible(infra, opsforge_template)
         ssh_args=-q -o ControlMaster=auto -o ControlPersist=60
     EOT
 
-    if opsforge_template.key?(:aws)
+    if opsforge_template[:infra].key?(:aws)
         cfg_defaults << "remote_user=ubuntu\n"
     else
         cfg_defaults << "remote_user=root\n"
@@ -186,12 +237,12 @@ def ansible(infra, opsforge_template)
     File.write("#{__dir__}/ansible/inventory.yaml", inventory)
     File.write("#{__dir__}/ansible/ansible.cfg", cfg)
 
-    if opsforge_template.key?(:aws)
+    if opsforge_template[:infra].key?(:aws)
         30.times do |t|
             raise 'Timeout while waiting for SSH access to AWS infra' if t == 30
 
             begin
-                cmd_exec("ssh ubuntu@#{infra[:frontend]} uptime", false)
+                cmd_exec("ssh ubuntu@#{infra[:cloud]} uptime", false)
             rescue StandardError
                 sleep 1
                 next
@@ -206,7 +257,7 @@ def ansible(infra, opsforge_template)
 end
 
 def terraform_opennebula(frontend, opsforge_template)
-    puts 'Setting up Frontend for Cognit'
+    puts 'Setting up Cloud-Edge Manager for Cognit'
 
     tfvars = "#{__dir__}/terraform/opennebula/terraform.tfvars"
     File.new(tfvars, 'w') unless File.exist?(tfvars)
@@ -217,7 +268,7 @@ def terraform_opennebula(frontend, opsforge_template)
     File.open(tfvars, 'w') do |file|
         file.puts("oned = \"#{oned}\"")
         file.puts("oneflow = \"#{oneflow}\"")
-        file.puts("password = \"#{opsforge_template[:one][:password]}\"")
+        file.puts("password = \"#{opsforge_template[:cognit][:cloud][:password]}\"")
     end
 
     terraform('opennebula')
@@ -230,7 +281,9 @@ def clean
 
     ['opennebula', 'aws'].each do |provider|
         Dir.chdir("#{__dir__}/terraform/#{provider}")
-        cmd_exec('terraform destroy --auto-approve', false)
+        ['init', 'destroy --auto-approve'].each do |cmd|
+            cmd_exec("terraform #{cmd}", false)
+        end
     end
 
     ['ansible.cfg', 'inventory.yaml'].each do |file|
@@ -243,6 +296,22 @@ def clean
 end
 
 # Helpers
+
+def socket?(host, port)
+    begin
+        Timeout.timeout(5) do
+            begin
+                socket = TCPSocket.new(host, port)
+                socket.close
+                true
+            rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH
+                false
+            end
+        end
+    rescue Timeout::Error
+        false
+    end
+end
 
 def cmd_exec(cmd, log = true)
     o, e, s = Open3.capture3(cmd)
@@ -317,18 +386,25 @@ when 'deploy'
     end
 
     infra = nil
-    opsforge_template[:one][:password] = SecureRandom.alphanumeric
+    opsforge_template[:cognit] = {} unless opsforge_template.key?(:cognit)
+    opsforge_template[:cognit][:cloud] = {} unless opsforge_template[:cognit].key?(:cloud)
 
-    if opsforge_template.key?(:aws)
+    begin
+        inventory = YAML.load_file("#{__dir__}/ansible/inventory.yaml")
+        opsforge_template[:cognit][:cloud][:password] = inventory['frontend']['vars']['one_pass']
+    rescue StandardError
+        opsforge_template[:cognit][:cloud][:password] = SecureRandom.alphanumeric
+    end
+
+    if opsforge_template[:infra].key?(:aws)
         howlong { infra = terraform_aws(opsforge_template) }
     else
-        infra = opsforge_template[:hosts]
-        puts 'Deploying cognit on hosts'
-        JSON.pretty_generate(infra)
+        infra = opsforge_template[:infra][:hosts]
+        puts 'Deploying COGNIT on the specified hosts'
     end
 
     howlong { ansible(infra, opsforge_template) }
-    howlong { terraform_opennebula(infra[:frontend], opsforge_template) }
+    howlong { terraform_opennebula(infra[:cloud], opsforge_template) }
 
     verify_deployment(infra, opsforge_template)
 

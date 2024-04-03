@@ -27,6 +27,7 @@ terraform.rc
 # Ignore program input template with sensitive info
 example.yaml
 aws.yaml
+aws_minimal.yaml
 bare_metal.yaml
 
 # Ignore ansible generated files

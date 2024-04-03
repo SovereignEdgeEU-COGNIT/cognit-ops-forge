@@ -4,17 +4,14 @@
     repo:  "{{ repo_url }}"
     dest: "{{ repo_dest }}"
     force: true
+    version: "{{ version | default('main') }}"
 
 - name: Install Ruby
   become: true
   block:
     - name: Install required packages
       ansible.builtin.apt:
-        name:
-          - ruby
-          - ruby-dev
-          - build-essential
-          - zlib1g-dev
+        name: "{{ ruby_dependencies }}"
         state: present
         update_cache: true
 
@@ -34,6 +31,7 @@
     path: /etc/provision-engine/engine.conf
     regexp: '^:port:'
     line: ":port: {{ engine_port }}"
+  when: engine_port is defined
 
 - name: Point Engine to frontend
   ansible.builtin.command:
@@ -43,8 +41,3 @@
 - name: Start engine
   ansible.builtin.command: provision-engine-server start
   ignore_errors: true
-
-- name: Check if engine port is being used
-  ansible.builtin.wait_for:
-    port: "{{ port }}"
-    timeout: 5

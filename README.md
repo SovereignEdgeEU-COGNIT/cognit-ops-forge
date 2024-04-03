@@ -66,11 +66,13 @@ The deployment will create it's own VPC, Internet Gateway, subnets and Security 
 Example
 
 ```yaml
-:aws:
-  :region: "us-east-1"
-  :ssh_key: <your_aws_named_ssh_key>
-:one:
-  :ee_token: <your_ee_token>
+:infra:
+  :aws:
+    :region: "us-east-1"
+    :ssh_key: <your_aws_named_ssh_key>
+:cognit:
+  :cloud:
+    :ee_token: <your_ee_token>
 ```
 
 When finished, you should receive information about how to connect to each instance. For example
@@ -79,16 +81,16 @@ When finished, you should receive information about how to connect to each insta
 Setting up infrastructure on AWS
 Infrastructure on AWS has been deployed
 Took 60.673237 seconds
-Installing Frontend and Provisioning Engine
-Frontend and Provisioning Engine installed
+Installing Cloud-Edge Manager and Provisioning Engine
+Cloud-Edge Manager and Provisioning Engine installed
 Took 402.92903 seconds
-Setting up Frontend for Cognit
-Frontend ready for Cognit
+Setting up Cloud-Edge Manager for Cognit
+Cloud-Edge Manager ready for Cognit
 Took 29.167263 seconds
 
 Infrastructure
 {
-  "frontend": "ec2-18-210-28-170.compute-1.amazonaws.com",
+  "cloud": "ec2-18-210-28-170.compute-1.amazonaws.com",
   "engine": "ec2-44-221-73-110.compute-1.amazonaws.com",
   "ai_orchestrator": "ec2-3-230-155-179.compute-1.amazonaws.com"
 }
@@ -110,17 +112,30 @@ When deploying on specific hosts, the `:aws` key must not exist in the template,
 Example
 
 ```yaml
-:one:
-  :ee_token: <your_ee_token>
-  :sunstone_port: 80
-  :fireedge_port: 443
-:hosts:
-    :frontend: 172.20.0.4
+:infra:
+  :hosts:
+    :cloud: 172.20.0.4
     :engine: 172.20.0.9
     :ai_orchestrator: 172.20.17
 :cognit:
-  :engine_port: 6969
+  :engine:
+    :port: 6969
+    :version: release-1.3.4
+  :ai_orchestrator:
+    :version: dev_branch
+  :cloud:
+    :version: 6.8
+    :ee_token: <enterprise_edition token for Cloud Edge Manager>
+    :web_ports:
+      :main: 80
+      :next_gen: 443
+    :extensions:
+      :version: main
 ```
+
+> [!IMPORTANT]
+> The automatic deployment has been designed for Ubuntu 2204 hosts. It might not work if these hosts have different OS.
+
 
 ##  Terminate
 
@@ -130,7 +145,7 @@ For example
 
 ```bash
 ./opsforge clean
-Destroying resources created on AWS
+Destroying resources infrastructure
 COGNIT deployment succesfully destroyed
 ```
 
