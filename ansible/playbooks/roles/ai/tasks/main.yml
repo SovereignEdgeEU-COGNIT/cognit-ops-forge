@@ -22,9 +22,10 @@
     enabled: true
 
 - name: Clone AI Orchestrator repository
-  git:
+  ansible.builtin.git:
     repo: "{{ repo_url }}"
     dest: "{{ repo_dest }}"
+    version: "{{ version | default('main') }}"
 
 
 - name: Build Docker container

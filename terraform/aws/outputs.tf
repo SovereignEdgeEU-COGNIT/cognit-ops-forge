@@ -1,6 +1,6 @@
-output "frontend" {
-  value = aws_instance.frontend.public_dns
-  description = "Frontend public domain name"
+output "cloud" {
+  value = aws_instance.cloud.public_dns
+  description = "Cloud-Edge Manager public domain name"
 }
 
 output "engine" {

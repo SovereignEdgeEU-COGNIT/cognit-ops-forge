@@ -1,9 +1,9 @@
 ---
-# TODO: Check oned is ee otherwise Prometheus could not exist
 - name: Clone opennebula-extensions GitHub repository
   ansible.builtin.git:
     repo: "{{ repo_url }}"
     dest: "{{ repo_dest }}"
+    version: "{{ one_extensions_version | default('main') }}"
   run_once: true
 
 - name: Prometheus - Patch 1
