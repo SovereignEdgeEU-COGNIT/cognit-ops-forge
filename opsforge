@@ -21,10 +21,24 @@ HELP = <<~EOT
         help   -> This help message
 EOT
 
+#
+# Checks if all of the opsforge dependencies are met
+# Will raise an error if a dependency is missing
+#
 def verify_requirements
     ['aws', 'terraform', 'ansible'].each do |cmd|
         if !cmd_exists?(cmd)
             raise "Missing required command #{cmd}. Check requirements on documentation."
+        end
+    end
+
+    raise '"one-deploy" git submodule is missing' unless File.directory?("#{__dir__}/ansible/one-deploy")
+
+    ['json-schema'].each do |gem|
+        begin
+            Gem::Specification.find_by_name(gem)
+        rescue StandardError
+            raise "Missing gem \"#{gem}\""
         end
     end
 end
@@ -76,12 +90,24 @@ def verify_deployment(infra, opsforge_template)
     # checks[:cloud][:web_ports][:next_gen] = true if socket?(infra[:cloud], fireedge_port)
 end
 
+#
+# Check if the provided opsforge template complies with the schema
+#
+# @param [Hash] opsforge_template opsforge yaml template contents
+#
 def validate_template(opsforge_template)
-    schema = YAML.load_file("#{__dir__}/schema.json")
+    schema = JSON.load_file("#{__dir__}/schema.json")
 
     JSON::Validator.validate!(schema, opsforge_template)
 end
 
+#
+# Provisions the COGNIT modules in AWS using terraform
+#
+# @param [Hash] opsforge_template opsforge yaml template contents
+#
+# @return [Hash] Infrastructure hostnames for each COGNIT module
+#
 def terraform_aws(opsforge_template)
     puts 'Setting up infrastructure on AWS'
 
@@ -113,6 +139,12 @@ def terraform_aws(opsforge_template)
     return ec2_instances
 end
 
+#
+# Sets up the COGNIT modules with ansible using one-deploy
+#
+# @param [Hash] infra COGNIT infrastructure report for the provision stage
+# @param [Hash] opsforge_template opsforge yaml template contents
+#
 def ansible(infra, opsforge_template)
     puts 'Installing Cloud-Edge Manager, Provisioning Engine and AI Orchestrator'
 
@@ -256,6 +288,12 @@ def ansible(infra, opsforge_template)
     puts 'Frontend and Provisioning Engine installed'
 end
 
+#
+# Populates the Cloud-Edge manager with the Serverless Runtimes appliances
+#
+# @param [String] frontend Cloud-Edge manager hostname
+# @param [Hash] opsforge_template opsforge yaml template contents
+#
 def terraform_opennebula(frontend, opsforge_template)
     puts 'Setting up Cloud-Edge Manager for Cognit'
 
@@ -276,20 +314,31 @@ def terraform_opennebula(frontend, opsforge_template)
     puts 'Frontend ready for Cognit'
 end
 
+#
+# Deletes COGNIT infrastructure provisioning and
+# any previously generated output file
+#
 def clean
     puts 'Destroying infrastructure'
 
-    ['opennebula', 'aws'].each do |provider|
-        Dir.chdir("#{__dir__}/terraform/#{provider}")
-        ['init', 'destroy --auto-approve'].each do |cmd|
-            cmd_exec("terraform #{cmd}", false)
-        end
+    # Destroy infrastructure in AWS
+    Dir.chdir("#{__dir__}/terraform/aws")
+    ['init', 'destroy --auto-approve'].each do |cmd|
+        cmd_exec("terraform #{cmd}", false)
     end
 
+    # Delete terraform-opennebula state files
+    ['tfstate', 'tfstate.backup', 'tfvars'].each do |tf_file|
+        file = "#{__dir__}/terraform/opennebula/terraform.#{tf_file}"
+        File.delete(file) if File.exist?(file)
+    end
+
+    # Delete one-deploy input
     ['ansible.cfg', 'inventory.yaml'].each do |file|
         File.delete("#{__dir__}/ansible/#{file}")
     end
 
+    # Delete opsforge log
     File.delete("#{__dir__}/opsforge.log")
 
     puts 'COGNIT deployment succesfully destroyed'
@@ -297,6 +346,14 @@ end
 
 # Helpers
 
+#
+# Checks if a port is active on a host
+#
+# @param [String] host
+# @param [Integer] port
+#
+# @return [Boolean]
+#
 def socket?(host, port)
     begin
         Timeout.timeout(5) do
@@ -313,6 +370,14 @@ def socket?(host, port)
     end
 end
 
+#
+# Executes a command on the CLI
+#
+# @param [String] cmd Command
+# @param [Boolean] log Log command output in opsforge.log
+#
+# @return [String] Command standard output
+#
 def cmd_exec(cmd, log = true)
     o, e, s = Open3.capture3(cmd)
 
@@ -326,6 +391,13 @@ def cmd_exec(cmd, log = true)
     o
 end
 
+#
+# Checks if a command exist
+#
+# @param [String] command Command
+#
+# @return [Boolean]
+#
 def cmd_exists?(command)
     exts = ENV['PATHEXT'] ? ENV['PATHEXT'].split(';') : ['']
     ENV['PATH'].split(File::PATH_SEPARATOR).each do |path|
@@ -337,6 +409,13 @@ def cmd_exists?(command)
     false
 end
 
+#
+# Provisions infrastructure using terraform
+#
+# @param [String] provider
+#
+# @return [String] terraform output after provisioning completes
+#
 def terraform(provider)
     output = []
 
@@ -351,12 +430,22 @@ def terraform(provider)
     output
 end
 
+#
+# Gather the public_ip that the opsforge executor uses to reach the internet
+#
+# @return [String] public IP address
+#
 def public_ip
     uri = URI('https://api.ipify.org')
     response = Net::HTTP.get(uri)
     response.strip
 end
 
+#
+# Writes information to the dedicated opsforge log file
+#
+# @param [String] info information to be logged
+#
 def log(info)
     file = "#{__dir__}/opsforge.log"
     File.open(file, 'a') do |f|
@@ -364,10 +453,18 @@ def log(info)
     end
 end
 
+#
+# Measures how long will a block of code take to run
+#
+# @param [Proc] &logic Lines of code to be executed
+#
+# @return [String] Command standard output
+#
 def howlong(&logic)
     start_time = Time.now
-    logic.call
+    output = logic.call
     puts "Took #{Time.now - start_time} seconds"
+    output
 end
 
 # BEGIN
@@ -378,12 +475,7 @@ case ARGV[0]
 when 'deploy'
     opsforge_template = YAML.load_file(ARGV[1])
 
-    begin
-        validate_template(opsforge_template)
-    rescue JSON::Schema::ValidationError => e
-        puts e
-        exit 1
-    end
+    validate_template(opsforge_template)
 
     infra = nil
     opsforge_template[:cognit] = {} unless opsforge_template.key?(:cognit)
