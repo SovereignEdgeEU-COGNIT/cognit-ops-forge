@@ -1,0 +1,36 @@
+---
+- name: Install iptables
+  ansible.builtin.apt:
+    name:
+      - iptables
+      - iptables-persistent
+    update_cache: true
+    state: present
+
+- name: Enable IP forwarding
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    state: present
+    reload: true
+
+- name: Configure NAT rules
+  ansible.builtin.iptables:
+    table: nat
+    chain: POSTROUTING
+    source: "{{ cognit_subnet }}"
+    out_interface: eth0
+    jump: MASQUERADE
+  notify: Save iptables rules
+
+- name: Redirect oned and oneflow traffic
+  ansible.builtin.iptables:
+    table: nat
+    chain: PREROUTING
+    protocol: tcp
+    destination_port: "{{ item.port }}"
+    jump: DNAT
+    to_destination: "{{ item.dest_host }}:{{ item.port }}"
+  loop:
+    - { port: 2633, dest_host: "{{ frontend_instance_ip }}" }
+    - { port: 2474, dest_host: "{{ frontend_instance_ip }}" }

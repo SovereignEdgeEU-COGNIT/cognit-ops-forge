@@ -1,0 +1,56 @@
+events {
+    worker_connections 1024;
+}
+
+http {
+    server {
+        listen 80;
+        server_name {{ domain_name }};
+
+        # Redirect all HTTP requests to HTTPS
+        return 301 https://$server_name$request_uri;
+    }
+
+    server {
+        listen 443 ssl;
+        server_name {{ domain_name }};
+
+        ssl_certificate /etc/nginx/ssl/certificate.crt;
+        ssl_certificate_key /etc/nginx/ssl/certificate.key;
+
+        location / {
+            proxy_pass http://{{ frontend_instance_ip }}:{{ sunstone_port }}/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        location /engine/ {
+            proxy_pass http://{{ engine_instance_ip }}:{{ engine_port }}/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        location /sunstone/ {
+            proxy_pass http://{{ frontend_instance_ip }}:{{ sunstone_port }}/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        }
+
+        location /fireedge/ {
+            proxy_pass http://{{ frontend_instance_ip }}:{{ fireedge_port }}/fireedge/;
+            proxy_redirect off;
+            log_not_found off;
+            proxy_buffering off;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header Host $http_host;
+            proxy_set_header X-Forwarded-FOR $proxy_add_x_forwarded_for;
+            access_log off;
+        }
+    }
+}

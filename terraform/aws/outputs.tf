@@ -1,14 +1,26 @@
+output "ingress" {
+  value = {
+    "public_dns" : aws_instance.ingress.public_dns,
+    "private_ip" : aws_instance.ingress.private_ip
+  }
+}
 output "cloud" {
-  value = aws_instance.cloud.public_dns
-  description = "Cloud-Edge Manager public domain name"
+  value = {
+    "public_dns" : aws_instance.cloud.public_dns,
+    "private_ip" : aws_instance.cloud.private_ip
+  }
 }
 
 output "engine" {
-  value = aws_instance.engine.public_dns
-  description = "Provision Engine public domain name"
+  value = {
+    "public_dns" : aws_instance.engine.public_dns,
+    "private_ip" : aws_instance.engine.private_ip
+  }
 }
 
 output "ai_orchestrator" {
-  value = aws_instance.ai.public_dns
-  description = "Provision Engine public domain name"
+  value = {
+    "public_dns" : aws_instance.ai.public_dns,
+    "private_ip" : aws_instance.ai.private_ip
+  }
 }

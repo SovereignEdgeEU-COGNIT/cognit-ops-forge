@@ -1,0 +1,7 @@
+network:
+  version: 2
+  ethernets:
+    eth0:
+      routes:
+        - to: 0.0.0.0/0
+          via: {{ default_gateway }}

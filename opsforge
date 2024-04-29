@@ -14,6 +14,8 @@ require 'json-schema'
 
 ONE_VERSION = 6.8
 
+ANSIBLE_SSH_ARGS_COMMON = '-q -o ControlMaster=auto -o ControlPersist=6 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
 HELP = <<~EOT
     opsforge CLI options
         deploy -> Deploys the COGNIT architecture on AWS
@@ -131,8 +133,11 @@ def terraform_aws(opsforge_template)
     ec2_instances = {}
 
     ['cloud', 'engine', 'ai_orchestrator'].each do |ec2|
-        ec2_instances[ec2.to_sym] = infra[ec2]['value']
+        ec2_instances[ec2.to_sym] = infra[ec2]['value']['private_ip']
     end
+
+    ec2_instances[:ingress] = infra['ingress']['value']['public_dns']
+    ec2_instances[:gateway] = infra['ingress']['value']['private_ip']
 
     puts 'Infrastructure on AWS has been deployed'
 
@@ -148,7 +153,30 @@ end
 def ansible(infra, opsforge_template)
     puts 'Installing Cloud-Edge Manager, Provisioning Engine and AI Orchestrator'
 
+    Dir.chdir("#{__dir__}/ansible/one-deploy")
+    cmd_exec('make requirements')
+
+    if opsforge_template[:infra].key?(:aws)
+        ansible_user = 'ubuntu'
+    else
+        ansible_user = 'root'
+    end
+
+    infra[:gateway] = infra[:ingress] if opsforge_template[:infra].key?(:hosts)
+
     inventory = {
+        'ingress' => {
+            'hosts' => {
+                'i1' => {
+                    'ansible_host' => infra[:ingress]
+                }
+            },
+            'vars' => {
+                'domain_name' => infra[:ingress],
+                'engine_instance_ip' => infra[:engine],
+                'frontend_instance_ip' => infra[:cloud]
+            }
+        },
         'frontend' => {
             'hosts' => {
                 'f1' => {
@@ -156,6 +184,8 @@ def ansible(infra, opsforge_template)
                 }
             },
             'vars' => {
+                'ansible_ssh_common_args' => "#{ANSIBLE_SSH_ARGS_COMMON} -o ProxyJump=#{ansible_user}@#{infra[:ingress]}",
+                'default_gateway' => infra[:gateway],
                 'one_version' => opsforge_template[:cognit][:cloud][:version] || ONE_VERSION,
                 'one_pass' => opsforge_template[:cognit][:cloud][:password],
                 'one_token' => opsforge_template[:cognit][:cloud][:ee_token],
@@ -185,27 +215,39 @@ def ansible(infra, opsforge_template)
                 }
             }
         },
-        # TODO: Enable ai entry inventory after instructions have been verified by AI team
-        # 'ai' => {
-        #     'hosts' => {
-        #         'a1' => {
-        #             'ansible_host' => infra[:ai_orchestrator]
-        #         }
-        #     },
-        #     'vars' => {}
-        # },
-        'engine' => {
+        'ai' => {
             'hosts' => {
-                'e1' => {
-                    'ansible_host' => infra[:engine]
+                'a1' => {
+                    'ansible_host' => infra[:ai_orchestrator]
                 }
             },
             'vars' => {
+                'ansible_ssh_common_args' => "#{ANSIBLE_SSH_ARGS_COMMON} -o ProxyJump=#{ansible_user}@#{infra[:ingress]}",
+                'default_gateway' => infra[:gateway]
+            }
+        },
+        'engine' => {
+            'hosts' => {
+                'e1' => {
+                    'ansible_host' => infra[:engine],
+                    'default_gateway' => infra[:gateway]
+                }
+            },
+            'vars' => {
+                'ansible_ssh_common_args' => "#{ANSIBLE_SSH_ARGS_COMMON} -o ProxyJump=#{ansible_user}@#{infra[:ingress]}",
+                'default_gateway' => infra[:gateway],
                 'oned' => "http://#{infra[:cloud]}:2633/RPC2",
                 'oneflow' => "http://#{infra[:cloud]}:2474"
             }
         }
     }
+
+    if opsforge_template[:cognit].key?(:certificate)
+        inventory['ingress']['vars']['ssl_certificate_path'] =
+            opsforge_template[:cognit][:certificate][:crt]
+        inventory['ingress']['vars']['ssl_certificate_key_path'] =
+            opsforge_template[:cognit][:certificate][:key]
+    end
 
     inventory['frontend']['vars']['one_extensions_version'] =
         opsforge_template[:cognit][:cloud][:extensions][:version] if opsforge_template[:cognit][:cloud].key?(:extensions) && opsforge_template[:cognit][:cloud][:extensions][:version]
@@ -224,12 +266,12 @@ def ansible(infra, opsforge_template)
             opsforge_template[:cognit][:engine][:version] if opsforge_template[:cognit][:engine][:version]
     end
 
-    # TODO
-    # inventory['ai']['vars']['version'] = opsforge_template[:cognit][:ai][:version] if opsforge_template[:cognit].key?(:ai) && opsforge_template[:cognit][:ai][:version]
+    inventory['ai']['vars']['version'] =
+        opsforge_template[:cognit][:ai][:version] if opsforge_template[:cognit].key?(:ai) && opsforge_template[:cognit][:ai][:version]
 
     inventory = inventory.to_yaml
 
-    cfg_defaults = <<~EOT
+    cfg = <<~EOT
         [defaults]
         collections_paths=./one-deploy/ansible_collections/
         inventory=./inventory.yaml
@@ -240,49 +282,31 @@ def ansible(infra, opsforge_template)
         any_errors_fatal=true
         stdout_callback=yaml
         timeout=30
-    EOT
-
-    cfg_privilege_escalation = <<~EOT
+        remote_user=#{ansible_user}
         [privilege_escalation]
         become=true
         become_user=root
-    EOT
-
-    cfg_ssh_connection = <<~EOT
         [ssh_connection]
         pipelining=true
-        ssh_args=-q -o ControlMaster=auto -o ControlPersist=60
+        ssh_args=#{ANSIBLE_SSH_ARGS_COMMON}
     EOT
 
-    if opsforge_template[:infra].key?(:aws)
-        cfg_defaults << "remote_user=ubuntu\n"
-    else
-        cfg_defaults << "remote_user=root\n"
-    end
-
-    cfg = cfg_defaults + cfg_privilege_escalation + cfg_ssh_connection
-
-    Dir.chdir("#{__dir__}/ansible/one-deploy")
-    cmd_exec('make requirements')
     Dir.chdir("#{__dir__}/ansible")
-
     File.write("#{__dir__}/ansible/inventory.yaml", inventory)
     File.write("#{__dir__}/ansible/ansible.cfg", cfg)
 
-    if opsforge_template[:infra].key?(:aws)
-        30.times do |t|
-            raise 'Timeout while waiting for SSH access to AWS infra' if t == 30
+    30.times do |t|
+        raise 'Timeout while waiting for SSH access to infra' if t == 30
 
-            begin
-                cmd_exec("ssh ubuntu@#{infra[:cloud]} uptime", false)
-            rescue StandardError
-                sleep 1
-                next
-            end
+        begin
+            cmd_exec("ssh #{ansible_user}@#{infra[:ingress]} uptime", false)
+        rescue StandardError
+            sleep 1
+            next
         end
     end
 
-    cmd_exec('ansible-playbook -vvv playbooks/cognit.yaml')
+    cmd_exec('ansible-playbook playbooks/cognit.yaml')
     Dir.chdir("#{__dir__}/..")
 
     puts 'Frontend and Provisioning Engine installed'
@@ -490,27 +514,44 @@ when 'deploy'
 
     if opsforge_template[:infra].key?(:aws)
         howlong { infra = terraform_aws(opsforge_template) }
+        ssh_connection = "- SSH: Connect to the host \"#{infra[:ingress]}\" with the \"ubuntu\" user, using the provided ssh key. You can access the rest of the cluster using this host as an SSH jump host."
     else
         infra = opsforge_template[:infra][:hosts]
+        ssh_connection = ''
         puts 'Deploying COGNIT on the specified hosts'
     end
 
     howlong { ansible(infra, opsforge_template) }
-    howlong { terraform_opennebula(infra[:cloud], opsforge_template) }
+    howlong { terraform_opennebula(infra[:ingress], opsforge_template) }
 
     verify_deployment(infra, opsforge_template)
 
+    if !opsforge_template[:cognit].key?(:certificate)
+        ssl_certs = "- SSL: Certificate files at #{Dir.home}/.cognit_ssl_certs"
+    else
+        ssl_certs = ''
+    end
+
+    infra.delete!(:gateway)
+
     report = <<~EOT
+        #{'='*80}
 
         Infrastructure
         #{JSON.pretty_generate(infra)}
 
-        Connect to these hosts with the <ubuntu> user using the provided ssh key'
-        Logs available at ./opsforge.log'
+        Access
+        - Cloud-Edge Manager credentials: oneadmin:#{opsforge_template[:cognit][:cloud][:password]}
+        - Provision Engine: https://#{infra[:ingress]}/engine
+        - Stable Web UI:    https://#{infra[:ingress]}/sunstone
+        - Next Gen Web UI:  https://#{infra[:ingress]}/fireedge
+        #{ssh_connection}
+        #{ssl_certs}
 
         Take a look at AWS cluster provisioning in order to setup your KVM cluster\nhttps://docs.opennebula.org/stable/provision_clusters/providers/aws_provider.html#aws-provider
-
         After that, take a look at the Energy Consumption extension\nhttps://github.com/SovereignEdgeEU-COGNIT/opennebula-extensions?tab=readme-ov-file#scaphandre-extension
+
+        Logs available at ./opsforge.log'
     EOT
 
     puts report

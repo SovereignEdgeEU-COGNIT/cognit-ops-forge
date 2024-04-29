@@ -1,0 +1,39 @@
+---
+- name: Add external scheduler configuration
+  ansible.builtin.blockinfile:
+    path: /etc/one/sched.conf
+    block: |
+      EXTERNAL_SCHEDULER = [
+          SERVER = "{{ external_scheduler }}",
+          PROXY = "",
+          TIMEOUT = 10
+      ]
+
+- name: Restart opennebula-scheduler service
+  ansible.builtin.systemd:
+    name: opennebula-scheduler
+    state: restarted
+- name: Update FireEdge Port
+  ansible.builtin.lineinfile:
+    path: /etc/one/fireedge-server.conf
+    regexp: '^port:\s*\d+$'
+    line: "port: {{ fireedge_port }}"
+  when: fireedge_port is defined
+
+- name: Restart opennebula-fireedge service
+  ansible.builtin.systemd:
+    name: opennebula-fireedge
+    state: restarted
+  when: fireedge_port is defined
+- name: Update Sunstone Port
+  ansible.builtin.lineinfile:
+    path: /etc/one/sunstone-server.conf
+    regexp: '^port:\s*\d+$'
+    line: "port: {{ sunstone_port }}"
+  when: sunstone_port is defined
+
+- name: Restart opennebula-sunstone service
+  ansible.builtin.systemd:
+    name: opennebula-sunstone
+    state: restarted
+  when: sunstone_port is defined
