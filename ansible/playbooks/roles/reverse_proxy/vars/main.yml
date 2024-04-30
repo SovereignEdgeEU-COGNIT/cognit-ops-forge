@@ -1,0 +1,6 @@
+---
+sunstone_port: 9869
+fireedge_port: 2616
+engine_port: 1337
+cert_crt: /etc/nginx/ssl/certificate.crt
+cert_key: /etc/nginx/ssl/certificate.key

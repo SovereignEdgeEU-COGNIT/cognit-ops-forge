@@ -1,62 +1,33 @@
 ---
+- name: Setup ingress node
+  hosts: "{{ ingress_group | d('ingress') }}"
+  roles:
+    - reverse_proxy
+    - nat_gateway
+
+- name: Setup frontend routing
+  hosts: "{{ frontend_group | d('frontend') }}"
+  roles:
+    - route
+
 - name: Setup frontend
   ansible.builtin.import_playbook: opennebula.deploy.main
-- name: Setup external scheduler
-  hosts: "{{ frontend_group | d('frontend') }}"
-  tasks:
-    - name: Add external scheduler configuration
-      ansible.builtin.blockinfile:
-        path: /etc/one/sched.conf
-        block: |
-          EXTERNAL_SCHEDULER = [
-              SERVER = "{{ external_scheduler }}",
-              PROXY = "",
-              TIMEOUT = 10
-          ]
 
-    - name: Restart opennebula-scheduler service
-      ansible.builtin.systemd:
-        name: opennebula-scheduler
-        state: restarted
-- name: Configure FireEdge
-  hosts: "{{ frontend_group | default('frontend') }}"
-  tasks:
-    - name: Update FireEdge Port
-      ansible.builtin.lineinfile:
-        path: /etc/one/fireedge-server.conf
-        regexp: '^port:\s*\d+$'
-        line: "port: {{ fireedge_port }}"
-      when: fireedge_port is defined
-
-    - name: Restart opennebula-fireedge service
-      ansible.builtin.systemd:
-        name: opennebula-fireedge
-        state: restarted
-      when: fireedge_port is defined
-- name: Configure Sunstone
-  hosts: "{{ frontend_group | default('frontend') }}"
-  tasks:
-    - name: Update Sunstone Port
-      ansible.builtin.lineinfile:
-        path: /etc/one/sunstone-server.conf
-        regexp: '^port:\s*\d+$'
-        line: "port: {{ sunstone_port }}"
-      when: sunstone_port is defined
-
-    - name: Restart opennebula-sunstone service
-      ansible.builtin.systemd:
-        name: opennebula-sunstone
-        state: restarted
-      when: sunstone_port is defined
-- name: Setup provision-engine
-  hosts: "{{ engine_group | d('engine') }}"
-  roles:
-    - engine
-- name: Setup opennebula-extensions
+- name: Setup COGNIT frontend
   hosts: "{{ frontend_group | d('frontend') }}"
   roles:
     - opennebula-extensions
-- name: Setup ai-orchestrator
-  hosts: "{{ ai_group | d('ai') }}"
+    - cognit_frontend
+
+- name: Setup provision-engine
+  hosts: "{{ engine_group | d('engine') }}"
   roles:
-    - ai
+    - route
+    - engine
+
+# TODO: Enable when instructions are provided
+# - name: Setup ai-orchestrator
+#   hosts: "{{ ai_group | d('ai') }}"
+#   roles:
+#     - route
+#     - ai

@@ -1,0 +1,17 @@
+---
+- name: Remove existing default route
+  ansible.builtin.command: ip route del default via 10.0.1.1 dev eth0
+
+- name: Add new default route
+  ansible.builtin.command: ip route add default via {{ default_gateway }}
+
+- name: Configure persistent default route
+  template:
+    src: 99-default-route.yaml.j2
+    dest: /etc/netplan/99-default-route.yaml
+    mode: '0644'
+  register: netplan_config
+
+- name: Apply netplan changes
+  ansible.builtin.command: netplan apply
+  when: netplan_config.changed

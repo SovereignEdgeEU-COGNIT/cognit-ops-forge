@@ -45,19 +45,23 @@
           "properties": {
             "hosts": {
               "type": "object",
-              "required": ["cloud", "engine", "ai_orchestrator"],
+              "required": ["ingress", "cloud", "engine", "ai_orchestrator"],
               "properties": {
+                "ingress": {
+                  "type": "string",
+                  "description": "Hostname/IP where the COGNIT Ingress controller will be installed"
+                },
                 "cloud": {
                   "type": "string",
-                  "description": "Hostname/IP where the COGNIT will be installed"
+                  "description": "Hostname/IP where the COGNIT Cloud-Edge Manager will be installed"
                 },
                 "engine": {
                   "type": "string",
-                  "description": "Hostname/IP where the COGNIT will be installed"
+                  "description": "Hostname/IP where the COGNIT Provisioning Engine will be installed"
                 },
                 "ai_orchestrator": {
                   "type": "string",
-                  "description": "Hostname/IP where the COGNIT will be installed"
+                  "description": "Hostname/IP where the COGNIT AI Orchestrator will be installed"
                 }
               }
             }
@@ -68,14 +72,23 @@
     "cognit": {
       "type": "object",
       "properties": {
+        "certificate": {
+          "type": "object",
+          "required": ["crt", "key"],
+          "properties": {
+            "crt": {
+              "type": "string",
+              "description": "Path of the certificate file in the opsforge runner"
+            },
+            "key": {
+              "type": "string",
+              "description": "Path of the certificate key file in the opsforge runner"
+            }
+          }
+        },
         "engine": {
           "type": "object",
           "properties": {
-            "port": {
-              "type": "integer",
-              "description": "Provisioning Engine port",
-              "default": 1337
-            },
             "version": {
               "type": "string",
               "description": "Git repository HEAD of the Cloud-Edge Manager extensions GitHub repository to use as version reference",
@@ -110,28 +123,13 @@
         }
       }
     },
-    "web_ports": {
-      "type": "object",
-      "properties": {
-        "main": {
-          "type": "integer",
-          "description": "Cloud-Edge Manager stable Web GUI port",
-          "default": 9869
-        },
-        "next_gen": {
-          "type": "integer",
-          "description": "Cloud-Edge Manager next gen Web UI port",
-          "default": 2616
-        }
-      }
-    },
     "extensions": {
       "type": "object",
       "properties": {
         "version": {
           "type": "string",
           "description": "Git repository HEAD of the Cloud-Edge Manager extensions GitHub repository to use as version reference",
-          "default": 2616
+          "default": "main"
         }
       }
     }
