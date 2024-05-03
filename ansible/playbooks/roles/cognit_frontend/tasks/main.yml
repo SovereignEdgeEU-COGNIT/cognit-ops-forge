@@ -13,6 +13,7 @@
   ansible.builtin.systemd:
     name: opennebula-scheduler
     state: restarted
+
 - name: Update FireEdge Port
   ansible.builtin.lineinfile:
     path: /etc/one/fireedge-server.conf
@@ -25,6 +26,7 @@
     name: opennebula-fireedge
     state: restarted
   when: fireedge_port is defined
+
 - name: Update Sunstone Port
   ansible.builtin.lineinfile:
     path: /etc/one/sunstone-server.conf

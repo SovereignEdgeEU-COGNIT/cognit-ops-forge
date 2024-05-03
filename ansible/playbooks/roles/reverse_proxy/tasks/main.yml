@@ -2,6 +2,7 @@
   ansible.builtin.apt:
     name: nginx
     state: present
+    update_cache: true
 
 - name: Create SSL certificate directory
   ansible.builtin.file:

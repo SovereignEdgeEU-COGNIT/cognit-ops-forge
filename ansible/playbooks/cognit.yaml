@@ -5,15 +5,15 @@
     - reverse_proxy
     - nat_gateway
 
-- name: Setup frontend routing
+- name: Setup Cloud-Edge Manager routing
   hosts: "{{ frontend_group | d('frontend') }}"
   roles:
     - route
 
-- name: Setup frontend
+- name: Install OpenNebula
   ansible.builtin.import_playbook: opennebula.deploy.main
 
-- name: Setup COGNIT frontend
+- name: Setup COGNIT Cloud-Edge Manager
   hosts: "{{ frontend_group | d('frontend') }}"
   roles:
     - opennebula-extensions
@@ -25,9 +25,8 @@
     - route
     - engine
 
-# TODO: Enable when instructions are provided
-# - name: Setup ai-orchestrator
-#   hosts: "{{ ai_group | d('ai') }}"
-#   roles:
-#     - route
-#     - ai
+- name: Setup ai-orchestrator
+  hosts: "{{ ai_group | d('ai') }}"
+  roles:
+    - route
+    - ai

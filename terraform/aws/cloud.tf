@@ -55,7 +55,7 @@ resource "aws_security_group" "cloud" {
     cidr_blocks = [aws_subnet.cognit.cidr_block]
   }
 
-  # Allow access to oned and oneflow
+  # Allow access to oned
   ingress {
     from_port   = 2633
     to_port     = 2633
@@ -63,9 +63,18 @@ resource "aws_security_group" "cloud" {
     cidr_blocks = [aws_subnet.cognit.cidr_block, "${var.local_machine_ip}/32"]
   }
 
+  # Allow access to oneflow
   ingress {
     from_port   = 2474
     to_port     = 2474
+    protocol    = "tcp"
+    cidr_blocks = [aws_subnet.cognit.cidr_block, "${var.local_machine_ip}/32"]
+  }
+
+  # Allow access to Prometheus from the cognit subnet
+  ingress {
+    from_port   = 9090
+    to_port     = 9090
     protocol    = "tcp"
     cidr_blocks = [aws_subnet.cognit.cidr_block, "${var.local_machine_ip}/32"]
   }

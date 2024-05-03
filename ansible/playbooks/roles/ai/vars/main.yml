@@ -1,8 +1,0 @@
----
-python_libraries:
-  - fastapi==0.103.1
-  - requests==2.25.1
-  - uvicorn==0.23.2
-docker_version: "24.0.6"
-repo_url: "https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator.git"
-repo_dest: "/opt/ai-orchestrator"

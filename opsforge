@@ -224,14 +224,16 @@ def ansible(infra, opsforge_template)
             },
             'vars' => {
                 'ansible_ssh_common_args' => "#{ANSIBLE_SSH_ARGS_COMMON} -o ProxyJump=#{ansible_user}@#{infra[:ingress]}",
-                'default_gateway' => infra[:gateway]
+                'default_gateway' => infra[:gateway],
+                'oned' => "http://#{infra[:cloud]}:2633/RPC2",
+                'one_pass' => opsforge_template[:cognit][:cloud][:password],
+                'prometheus' => infra[:cloud]
             }
         },
         'engine' => {
             'hosts' => {
                 'e1' => {
-                    'ansible_host' => infra[:engine],
-                    'default_gateway' => infra[:gateway]
+                    'ansible_host' => infra[:engine]
                 }
             },
             'vars' => {
@@ -274,7 +276,7 @@ def ansible(infra, opsforge_template)
 
     cfg = <<~EOT
         [defaults]
-        collections_paths=./one-deploy/ansible_collections/
+        collections_path=./one-deploy/ansible_collections/
         inventory=./inventory.yaml
         gathering=explicit
         host_key_checking=false
@@ -552,7 +554,7 @@ when 'deploy'
         ssl_certs = ''
     end
 
-    infra.delete!(:gateway)
+    infra.delete(:gateway)
 
     report = <<~EOT
         #{'='*80}
