@@ -19,13 +19,13 @@ OpsForge will automatically deploy and configure the following components on the
 
 - [OpenNebula Frontend node](https://docs.opennebula.io/STS/installation_and_configuration/frontend_installation/overview.html). All needed resources, like the Serverless Runtime templates, are created.
 - [Provision Engine](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine)
-- [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator) (only the initial configuration)
+- [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator)
 
-Afterwards you will need to manually
+Afterwards you will need to manually setup
 
-- [Serverless Runtime](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime). Currently OpsForge deploy a dummy image that needs to be replaced with a valid SR.
-- [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator) (component needs to be configured manually)
+- [Compute nodes](https://docs.opennebula.io/6.8/open_cluster_deployment/kvm_node/overview.html) and [networking](https://docs.opennebula.io/6.8/open_cluster_deployment/networking_setup/index.html), either manually or using the [public cloud providers](https://docs.opennebula.io/6.8/provision_clusters/providers/overview.html).
 
+- [Serverless Runtime](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime). Currently OpsForge deploy a dummy image that needs to be replaced with a valid SR appliance.
 Also you'll need a device client to make use of the infrastructure from your application
 
 - [Device Client Python](https://github.com/SovereignEdgeEU-COGNIT/device-runtime-py)
