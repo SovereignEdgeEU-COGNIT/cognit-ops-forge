@@ -1,0 +1,4 @@
+---
+repo_url: https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime.git
+repo_dest: /root/serverless-runtime
+required_free_space_gb: 20

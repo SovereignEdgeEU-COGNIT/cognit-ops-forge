@@ -1,0 +1,5 @@
+---
+- name: Setup kiwi builder
+  hosts: kiwi
+  roles:
+    - kiwi

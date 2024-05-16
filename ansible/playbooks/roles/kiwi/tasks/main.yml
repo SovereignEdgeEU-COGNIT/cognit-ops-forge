@@ -1,0 +1,31 @@
+---
+- name: Verify openSUSE distribution
+  ansible.builtin.fail:
+    msg: "This role can only be executed on openSUSE systems"
+  when: ansible_distribution != "openSUSE Leap" and ansible_distribution != "openSUSE Tumbleweed"
+
+- name: Check available disk space
+  ansible.builtin.shell: |
+    set -o pipefail
+    df -BG --output=avail / | tail -n 1 | awk '{print $1}'
+  register: available_space
+  changed_when: false
+
+- name: Install required packages
+  community.general.zypper:
+    name:
+      - python3-kiwi
+      - git
+      - qemu-tools
+      - kpartx
+      - btrfsprogs
+      - squashfs
+      - xorriso
+    state: present
+    refresh: true
+
+- name: Clone serverless runtime repository
+  ansible.builtin.git:
+    repo: "{{ repo_url }}"
+    dest: "{{ repo_dest }}"
+    version: "{{ version | default('main') }}"
