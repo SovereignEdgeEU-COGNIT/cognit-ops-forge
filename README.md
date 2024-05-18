@@ -20,12 +20,12 @@ OpsForge will automatically deploy and configure the following components on the
 - [OpenNebula Frontend node](https://docs.opennebula.io/STS/installation_and_configuration/frontend_installation/overview.html). All needed resources, like the Serverless Runtime templates, are created.
 - [Provision Engine](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine)
 - [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator)
+- [Serverless Runtime](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime) appliance
 
 Afterwards you will need to manually setup
 
 - [Compute nodes](https://docs.opennebula.io/6.8/open_cluster_deployment/kvm_node/overview.html) and [networking](https://docs.opennebula.io/6.8/open_cluster_deployment/networking_setup/index.html), either manually or using the [public cloud providers](https://docs.opennebula.io/6.8/provision_clusters/providers/overview.html).
 
-- [Serverless Runtime](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime). Currently OpsForge deploy a dummy image that needs to be replaced with a valid SR appliance.
 Also you'll need a device client to make use of the infrastructure from your application
 
 - [Device Client Python](https://github.com/SovereignEdgeEU-COGNIT/device-runtime-py)
@@ -71,7 +71,7 @@ The deployment will be conducted as follows
             |
             |
             |
-    +-------v-----------+ +-------v--------+ +-------v------+-------v-----+
+    +-------v-----------+ +----------------+ +--------------+-------------+
     | Ingress Controller| |  Cloud-Edge    | | Provisioning | Ai          |
     | public ipv4       | |    Manager     | | Engine       | Orchestrator|
     | 10.0.1.x          | |   10.0.1.x     | | 10.0.1.x     | 10.0.1.x    |
@@ -160,6 +160,8 @@ Example
     :engine: 172.20.0.9
     :ai_orchestrator: 172.20.17
 :cognit:
+  :app:
+    :base: http://app_server.cognit/base_app # Replace with publicly available app
   :certificate:
     :crt: '~/certificate.crt'
     :key: '~/certificate.key'
@@ -176,6 +178,84 @@ Example
 
 > [!IMPORTANT]
 > The automatic deployment has been designed for Ubuntu 2204 hosts. It might not work if these hosts have different OS.
+
+
+## Build SR appliance
+
+A separate workflow exists to build the SR appliance. Underneath it uses [kiwi](https://osinside.github.io/kiwi/index.html) to perform the boostrap process.
+
+ In order to trigger the build process, run
+
+```
+./opsforge build_sr <host>
+```
+
+Replace host with the hostname/IP address of the machine that will build the SR appliance.
+
+> [!WARNING]
+> This machine needs to be a SUSE host and should have enough space available to bootrstrap a new image, about 10 GB should be enough.
+
+It will take a while since it needs to boostrap an entire operating system. The result will be a qcow2 image containing an OpenSUSE Guest OS ready to run in OpenNebula with the [Serverless Runtime software](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime).
+
+Example
+
+```
+./opsforge build_sr 172.20.0.5
+
+PLAY [Setup kiwi builder] ******************************************************
+
+TASK [Gathering Facts] *********************************************************
+[WARNING]: Platform linux on host kiwi1 is using the discovered Python
+interpreter at /usr/bin/python3.6, but future installation of another Python
+interpreter could change the meaning of that path. See
+https://docs.ansible.com/ansible-
+core/2.16/reference_appendices/interpreter_discovery.html for more information.
+ok: [kiwi1]
+
+TASK [kiwi : Verify openSUSE distribution] *************************************
+skipping: [kiwi1]
+
+TASK [kiwi : Install required packages] ****************************************
+ok: [kiwi1]
+
+TASK [kiwi : Copy kiwi image description files] ********************************
+ok: [kiwi1]
+
+TASK [kiwi : Check if output directory exists and is not empty] ****************
+ok: [kiwi1]
+
+TASK [kiwi : Clean up output directory] ****************************************
+changed: [kiwi1]
+
+TASK [kiwi : Create empty output directory] ************************************
+changed: [kiwi1]
+
+TASK [kiwi : Build kiwi image] *************************************************
+changed: [kiwi1]
+
+TASK [kiwi : Convert raw image to qcow2] ***************************************
+changed: [kiwi1]
+
+PLAY RECAP *********************************************************************
+kiwi1                      : ok=8    changed=4    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
+
+The appliance was generated at 172.20.0.5:/root/kiwi-image/output/cognit-sr.x86_64-1.0.0.qcow2
+
+## If we check on the host we find
+
+ls -l /root/kiwi-image/output/
+total 3783344
+drwxr-xr-x 3 root root         46 May 18 00:33 build
+-rw-r--r-- 1 root root   16097710 May 18 00:41 cognit-sr.x86_64-1.0.0.changes
+-rw-r--r-- 1 root root  625147904 May 18 00:54 cognit-sr.x86_64-1.0.0.install.iso
+-rw-r--r-- 1 root root      64306 May 18 00:41 cognit-sr.x86_64-1.0.0.packages
+-rw-r--r-- 1 root root 1597308928 May 18 00:54 cognit-sr.x86_64-1.0.0.qcow2
+-rw-r--r-- 1 root root 2105540608 May 18 00:41 cognit-sr.x86_64-1.0.0.raw
+-rw-r--r-- 1 root root       1577 May 18 00:41 cognit-sr.x86_64-1.0.0.verified
+-rw-r--r-- 1 root root      10333 May 18 00:54 kiwi.result
+-rw-r--r-- 1 root root        960 May 18 00:54 kiwi.result.json
+
+```
 
 
 ##  Terminate

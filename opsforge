@@ -18,9 +18,10 @@ ANSIBLE_SSH_ARGS_COMMON = '-q -o ControlMaster=auto -o ControlPersist=6 -o Stric
 
 HELP = <<~EOT
     opsforge CLI options
-        deploy -> Deploys the COGNIT architecture on AWS
-        clean  -> Frees up the resources on the public cloud
-        help   -> This help message
+        deploy          -> Deploys the COGNIT architecture on AWS
+        clean           -> Frees up the resources on the public cloud
+        build_sr [host] -> Trigger the Serverless Runtime Appliance automated build on [host]
+        help            -> This help message
 EOT
 
 #
@@ -100,7 +101,12 @@ end
 def validate_template(opsforge_template)
     schema = JSON.load_file("#{__dir__}/schema.json")
 
-    JSON::Validator.validate!(schema, opsforge_template)
+    begin
+        JSON::Validator.validate!(schema, opsforge_template)
+    rescue JSON::Schema::ValidationError => e
+        STDERR.puts e.message
+        exit 1
+    end
 end
 
 #
@@ -316,6 +322,38 @@ def ansible(infra, opsforge_template)
 end
 
 #
+# Triggers the build of the Serverless Runtime Appliance
+# The host should be an OpenSUSE host
+#
+# @param [String] host IP/Hostname of the host where the build will occurr
+# @param [String] jumphost IP/Hostname of the host used as SSH proxy
+#
+def kiwi(host, jumphost = nil)
+    inventory = {
+        'kiwi' => {
+            'hosts' => {
+                'kiwi1' => {
+                    'ansible_host' => host,
+                    'ansible_user' => 'root'
+                }
+            }
+        }
+    }
+
+    if jumphost
+        inventory['kiwi']['hosts']['kiwi1']['ansible_ssh_common_args'] =
+            "-o ProxyJump=root@#{jumphost}"
+    end
+
+    Dir.chdir("#{__dir__}/ansible")
+    File.write("#{__dir__}/ansible/inventory_kiwi.yaml", inventory.to_yaml)
+    cmd_exec('ansible-playbook playbooks/kiwi.yaml -i inventory_kiwi.yaml')
+    Dir.chdir("#{__dir__}/..")
+
+    puts "The appliance was generated at #{host}:/root/kiwi-image/output/cognit-sr.x86_64-1.0.0.qcow2"
+end
+
+#
 # Populates the Cloud-Edge manager with the Serverless Runtimes appliances
 #
 # @param [String] frontend Cloud-Edge manager hostname
@@ -327,14 +365,22 @@ def terraform_opennebula(frontend, opsforge_template)
     tfvars = "#{__dir__}/terraform/opennebula/terraform.tfvars"
     File.new(tfvars, 'w') unless File.exist?(tfvars)
 
+    tfvars_content = ''
+
     oned = "http://#{frontend}:2633/RPC2"
     oneflow = "http://#{frontend}:2474"
 
-    File.open(tfvars, 'w') do |file|
-        file.puts("oned = \"#{oned}\"")
-        file.puts("oneflow = \"#{oneflow}\"")
-        file.puts("password = \"#{opsforge_template[:cognit][:cloud][:password]}\"")
+    tfvars_content << "oned = \"#{oned}\"\n"
+    tfvars_content << "oneflow = \"#{oneflow}\"\n"
+    tfvars_content << "password = \"#{opsforge_template[:cognit][:cloud][:password]}\"\n"
+
+    if opsforge_template[:cognit].key?(:apps)
+        opsforge_template[:cognit][:apps].each do |app, path|
+            tfvars_content << "image_#{app} = \"#{path}\""
+        end
     end
+
+    File.open(tfvars, 'w') {|file| file.puts(tfvars_content) }
 
     terraform('opennebula')
 
@@ -543,7 +589,7 @@ when 'deploy'
         puts 'Deploying COGNIT on the specified hosts'
     end
 
-    howlong { ansible(infra, opsforge_template) }
+    # howlong { ansible(infra, opsforge_template) }
     howlong { terraform_opennebula(infra[:ingress], opsforge_template) }
 
     verify_deployment(infra, opsforge_template)
@@ -579,6 +625,22 @@ when 'deploy'
     puts report
 when 'clean'
     clean
+when 'build_sr'
+    ansible_host = ARGV[1]
+
+    if ansible_host.nil?
+        STDERR.puts HELP
+        exit 1
+    end
+
+    jumphost = ARGV[2]
+
+    if jumphost.nil?
+        kiwi(ansible_host)
+    else
+        kiwi(ansible_host, jumphost)
+    end
+
 when 'help'
     puts HELP
 else

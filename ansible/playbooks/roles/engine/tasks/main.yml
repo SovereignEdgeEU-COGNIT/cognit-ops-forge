@@ -1,5 +1,5 @@
 ---
-- name: Clone Provigion Engine repo
+- name: Clone Provision Engine repo
   ansible.builtin.git:
     repo:  "{{ repo_url }}"
     dest: "{{ repo_dest }}"
