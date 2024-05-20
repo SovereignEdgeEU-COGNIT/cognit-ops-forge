@@ -29,10 +29,12 @@ example.yaml
 aws.yaml
 aws_minimal.yaml
 bare_metal.yaml
+inventory_kiwi_dev.yaml
 
 # Ignore ansible generated files
 ansible/ansible.cfg
 ansible/inventory.yaml
+ansible/inventory_kiwi.yaml
 
 # Ignore generated log
 opsforge.log

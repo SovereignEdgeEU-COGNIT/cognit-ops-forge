@@ -1,0 +1,4 @@
+---
+kiwi_dest: /root/kiwi-image
+suse_ver: 15.6
+image_name: cognit-sr.x86_64-1.0.0

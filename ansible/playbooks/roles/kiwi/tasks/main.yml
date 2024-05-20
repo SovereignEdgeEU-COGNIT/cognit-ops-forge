@@ -1,0 +1,61 @@
+---
+- name: Verify openSUSE distribution
+  ansible.builtin.fail:
+    msg: "This role can only be executed on openSUSE systems"
+  when: ansible_distribution != "openSUSE Leap" and ansible_distribution != "openSUSE Tumbleweed"
+
+- name: Install required packages
+  community.general.zypper:
+    name:
+      - python3-kiwi
+      - git
+      - qemu-tools
+      - kpartx
+      - btrfsprogs
+      - squashfs
+      - xorriso
+    state: present
+    refresh: true
+
+- name: Copy kiwi image description files
+  ansible.builtin.copy:
+    src: serverless_runtime
+    dest: "{{ kiwi_dest }}/"
+    mode: preserve
+
+- name: Use designated serverless runtime version
+  ansible.builtin.lineinfile:
+    path: "{{ kiwi_dest }}/serverless_runtime/config.sh"
+    regexp: '^SR_VERSION=main'
+    line: "SR_VERSION={{sr_version}}"
+  when: sr_version is defined
+
+- name: Check if output directory exists and is not empty
+  ansible.builtin.find:
+    path: "{{ kiwi_dest }}/output/"
+    file_type: any
+  register: kiwi_output_dir
+
+- name: Clean up output directory
+  ansible.builtin.file:
+    path: "{{ kiwi_dest }}/output/"
+    state: absent
+  when: kiwi_output_dir.matched > 0
+  register: cleanup_output
+
+- name: Create empty output directory
+  ansible.builtin.file:
+    path: "{{ kiwi_dest }}/output/"
+    state: directory
+  when: cleanup_output is not defined or cleanup_output.changed
+
+- name: Build kiwi image
+  ansible.builtin.command:
+    cmd: kiwi-ng --debug system build --description {{ kiwi_dest }}/serverless_runtime --set-repo obs://openSUSE:Leap:{{ suse_ver }}/standard --target-dir {{ kiwi_dest }}/output
+  register: kiwi_build
+  changed_when: kiwi_build.rc == 0
+
+- name: Convert raw image to qcow2
+  ansible.builtin.command:
+    cmd: qemu-img convert -f raw -O qcow2 "{{ kiwi_dest }}/output/{{ image_name }}.raw" "{{ kiwi_dest }}/output/{{ image_name }}.qcow2"
+  when: kiwi_build.rc == 0

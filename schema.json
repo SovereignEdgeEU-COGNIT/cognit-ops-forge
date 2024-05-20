@@ -72,6 +72,32 @@
     "cognit": {
       "type": "object",
       "properties": {
+        "apps": {
+          "type": "object",
+          "properties": {
+            "base": {
+              "type": "string",
+              "description": "URL of the base Serverles Runtime appliance"
+            },
+            "Cybersec": {
+              "type": "string",
+              "description": "URL of the Cybersecurity use case Serverles Runtime appliance"
+            },
+            "Energy": {
+              "type": "string",
+              "description": "URL of the Energy use case Serverles Runtime appliance"
+            },
+            "Nature": {
+              "type": "string",
+              "description": "URL of the Energy use case Serverles Runtime appliance"
+            },
+            "SmartCity": {
+              "type": "string",
+              "description": "URL of the Smart City use case Serverles Runtime appliance"
+            }
+          },
+          "additionalProperties": false
+        },
         "certificate": {
           "type": "object",
           "required": ["crt", "key"],
