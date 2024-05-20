@@ -326,9 +326,10 @@ end
 # The host should be an OpenSUSE host
 #
 # @param [String] host IP/Hostname of the host where the build will occurr
+# @param [String] sr_version Serverless Runtime version to install in the App
 # @param [String] jumphost IP/Hostname of the host used as SSH proxy
 #
-def kiwi(host, jumphost = nil)
+def kiwi(host, sr_version = nil, jumphost = nil)
     inventory = {
         'kiwi' => {
             'hosts' => {
@@ -343,6 +344,10 @@ def kiwi(host, jumphost = nil)
     if jumphost
         inventory['kiwi']['hosts']['kiwi1']['ansible_ssh_common_args'] =
             "-o ProxyJump=root@#{jumphost}"
+    end
+
+    if sr_version
+        inventory['kiwi']['hosts']['kiwi1']['sr_version'] = sr_version
     end
 
     Dir.chdir("#{__dir__}/ansible")
@@ -589,7 +594,7 @@ when 'deploy'
         puts 'Deploying COGNIT on the specified hosts'
     end
 
-    # howlong { ansible(infra, opsforge_template) }
+    howlong { ansible(infra, opsforge_template) }
     howlong { terraform_opennebula(infra[:ingress], opsforge_template) }
 
     verify_deployment(infra, opsforge_template)
@@ -633,14 +638,15 @@ when 'build_sr'
         exit 1
     end
 
-    jumphost = ARGV[2]
+    args = [ansible_host]
 
-    if jumphost.nil?
-        kiwi(ansible_host)
-    else
-        kiwi(ansible_host, jumphost)
+    kiwi(*args) unless ARGV[2]
+
+    ARGV[2..-1].each do |arg|
+        args << arg unless arg.nil?
     end
 
+    kiwi(*args)
 when 'help'
     puts HELP
 else

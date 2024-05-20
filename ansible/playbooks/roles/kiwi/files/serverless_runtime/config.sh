@@ -143,20 +143,23 @@ rm -f /etc/ssh/sshd_config.d/*-cloud-init.conf
 ##########
 # Cognit #
 ##########
+PYTHON_VERSION=3.10
+SR_VERSION=main
 
-# Install python 3.10
+# Install python version
 
 curl https://pyenv.run | bash
 echo -e '\n# Add pyenv to PATH\nexport PYENV_ROOT="$HOME/.pyenv"\nexport PATH="$PYENV_ROOT/bin:$PATH"\n\n# Initialize pyenv\neval "$(pyenv init --path)"' >> ~/.bashrc
 source ~/.bashrc
-pyenv install 3.10
+pyenv install $PYTHON_VERSION
 
 # Install Serverless Runtime
 
 SR_DIR=/root/serverless-runtime
 git clone https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime.git "$SR_DIR"
 cd $SR_DIR
-pyenv local 3.10
+git checkout $SR_VERSION
+pyenv local $PYTHON_VERSION
 python3 -m pip install --upgrade pip
 python3 -m venv serverless-env
 source serverless-env/bin/activate

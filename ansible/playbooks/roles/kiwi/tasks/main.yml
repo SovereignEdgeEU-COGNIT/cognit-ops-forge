@@ -23,6 +23,13 @@
     dest: "{{ kiwi_dest }}/"
     mode: preserve
 
+- name: Use designated serverless runtime version
+  ansible.builtin.lineinfile:
+    path: "{{ kiwi_dest }}/serverless_runtime/config.sh"
+    regexp: '^SR_VERSION=main'
+    line: "SR_VERSION={{sr_version}}"
+  when: sr_version is defined
+
 - name: Check if output directory exists and is not empty
   ansible.builtin.find:
     path: "{{ kiwi_dest }}/output/"
