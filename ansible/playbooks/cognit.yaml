@@ -16,6 +16,7 @@
 - name: Setup COGNIT Cloud-Edge Manager
   hosts: "{{ frontend_group | d('frontend') }}"
   roles:
+    - biscuit
     - opennebula-extensions
     - cognit_frontend
 
