@@ -45,7 +45,49 @@
   failed_when: hook_result.rc != 0
   changed_when: hook_result.rc == 0
 
+- name: Check if biscuit auth driver directory exists
+  ansible.builtin.stat:
+    path: "{{ repo_dest }}/biscuit"
+  register: biscuit_driver
+
+- name: Configure biscuit auth driver
+  when: biscuit_driver.stat.exists
+  block:
+    - name: Install biscuit auth driver
+      ansible.builtin.copy:
+        src: "{{ repo_dest }}/biscuit"
+        remote_src: true
+        dest: /var/lib/one/remotes/auth
+        owner: oneadmin
+        group: oneadmin
+        mode: '0644'
+
+    - name: Enable biscuit auth driver
+      ansible.builtin.lineinfile:
+        path: /etc/one/oned.conf
+        regexp: '^AUTHN\s*='
+        line: 'AUTHN = "ssh,x509,ldap,server_cipher,server_x509,biscuit"'
+        state: present
+
+    - name: Add AUTH_MAD_CONF block to oned.conf
+      ansible.builtin.blockinfile:
+        path: /etc/one/oned.conf
+        block: |
+          AUTH_MAD_CONF = [
+              NAME = "biscuit",
+              PASSWORD_CHANGE = "YES",
+              DRIVER_MANAGED_GROUPS = "NO",
+              DRIVER_MANAGED_GROUP_ADMIN = "NO",
+              MAX_TOKEN_TIME = "-1"
+          ]
+        state: present
+
+    - name: Restart OpenNebula service
+      ansible.builtin.systemd:
+        name: opennebula
+        state: restarted
+
 - name: Delete opennebula-extensions GitHub repository
-  file:
+  ansible.builtin.file:
     path: "{{ repo_dest }}"
     state: absent
