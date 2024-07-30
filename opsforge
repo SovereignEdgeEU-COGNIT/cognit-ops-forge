@@ -405,19 +405,18 @@ def clean
         cmd_exec("terraform #{cmd}", false)
     end
 
-    # Delete terraform-opennebula state files
-    ['tfstate', 'tfstate.backup', 'tfvars'].each do |tf_file|
-        file = "#{__dir__}/terraform/opennebula/terraform.#{tf_file}"
-        File.delete(file) if File.exist?(file)
-    end
+    deployment_output = {
+        '/terraform/opennebula/terraform.' => ['tfstate', 'tfstate.backup', 'tfvars'],
+        '/ansible/' => ['ansible.cfg', 'inventory.yaml'],
+        '/opsforge' => ['.log']
+    }
 
-    # Delete one-deploy input
-    ['ansible.cfg', 'inventory.yaml'].each do |file|
-        File.delete("#{__dir__}/ansible/#{file}")
+    deployment_output.each do |k, v|
+        v.each do |f|
+            file = "#{__dir__}#{k}#{f}"
+            File.delete(file) if File.exist?(file)
+        end
     end
-
-    # Delete opsforge log
-    File.delete("#{__dir__}/opsforge.log")
 
     puts 'COGNIT deployment succesfully destroyed'
 end
