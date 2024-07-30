@@ -222,6 +222,9 @@ def ansible(infra, opsforge_template)
                 }
             }
         },
+        'node' => {
+            'hosts' => {}
+        },
         'ai' => {
             'hosts' => {
                 'a1' => {
