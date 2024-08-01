@@ -197,6 +197,7 @@ def ansible(infra, opsforge_template)
                 'one_pass' => opsforge_template[:cognit][:cloud][:password],
                 'one_token' => opsforge_template[:cognit][:cloud][:ee_token],
                 'external_scheduler' => "http://#{infra[:ai_orchestrator]}:4567",
+                'public_fireedge_endpoint' => "https://#{infra[:ingress]}/fireedge",
                 'features' => {
                     'prometheus' => true,
                     'gateproxy' => false

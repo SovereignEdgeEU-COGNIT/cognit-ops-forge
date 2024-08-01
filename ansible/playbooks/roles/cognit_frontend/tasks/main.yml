@@ -34,6 +34,12 @@
     line: "port: {{ sunstone_port }}"
   when: sunstone_port is defined
 
+- name: Update Sunstone FireEdge public endpoint
+  ansible.builtin.lineinfile:
+    path: /etc/one/sunstone-server.conf
+    regexp: '^public_fireedge_endpoint::\s*\d+$'
+    line: "public_fireedge_endpoint:: {{ public_fireedge_endpoint }}"
+
 - name: Restart opennebula-sunstone service
   ansible.builtin.systemd:
     name: opennebula-sunstone
