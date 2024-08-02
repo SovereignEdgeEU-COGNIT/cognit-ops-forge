@@ -41,7 +41,6 @@ resource "aws_security_group" "ingress" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-
   # Allow access to oned redirection for terraform-opennebula
   ingress {
     from_port   = 2633
@@ -64,6 +63,14 @@ resource "aws_security_group" "ingress" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = [aws_subnet.cognit.cidr_block]
+  }
+
+  # Allow BGP traffic from everywhere
+  ingress {
+    from_port   = 179
+    to_port     = 179
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   # Allow Web traffic from everywhere
