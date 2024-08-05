@@ -5,8 +5,11 @@
     - reverse_proxy
     - nat_gateway
 
-- name: Setup Cloud-Edge Manager routing
-  hosts: "{{ frontend_group | d('frontend') }}"
+- name: Apply routing to all relevant hosts
+  hosts:
+    - "{{ frontend_group | d('frontend') }}"
+    - "{{ engine_group | d('engine') }}"
+    - "{{ ai_group | d('ai') }}"
   roles:
     - route
 
@@ -18,16 +21,14 @@
   roles:
     - biscuit
     - opennebula-extensions
-    - cognit_frontend
+    - cognit_frontend # TODO: Rename to cognit opennebula frontend
 
 - name: Setup provision-engine
   hosts: "{{ engine_group | d('engine') }}"
   roles:
-    - route
     - engine
 
 - name: Setup ai-orchestrator
   hosts: "{{ ai_group | d('ai') }}"
   roles:
-    - route
     - ai

@@ -82,6 +82,14 @@ resource "aws_security_group" "ingress" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # Allow WireGuard port
+  ingress {
+    from_port   = 51820
+    to_port     = 51820
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   ingress {
     from_port   = 443
     to_port     = 443

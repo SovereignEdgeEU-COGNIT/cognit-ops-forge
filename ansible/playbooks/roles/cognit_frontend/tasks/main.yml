@@ -1,4 +1,10 @@
 ---
+- name: Check if external scheduler configuration exists
+  ansible.builtin.shell: grep -qE '^[[:space:]]*EXTERNAL_SCHEDULER' /etc/one/sched.conf
+  register: scheduler_check
+  changed_when: false
+  failed_when: false
+
 - name: Add external scheduler configuration
   ansible.builtin.blockinfile:
     path: /etc/one/sched.conf
@@ -8,11 +14,14 @@
           PROXY = "",
           TIMEOUT = 10
       ]
+  when: scheduler_check.rc != 0
+  register: config_update
 
 - name: Restart opennebula-scheduler service
   ansible.builtin.systemd:
     name: opennebula-scheduler
     state: restarted
+  when: config_update.changed
 
 - name: Install opennebula-provision
   ansible.builtin.package:
@@ -31,7 +40,7 @@
 
 - name: Install Terraform
   ansible.builtin.unarchive:
-    src: "https://releases.hashicorp.com/terraform/{{ teraform_version }}/terraform_{{ teraform_version }}_linux_amd64.zip"
+    src: "https://releases.hashicorp.com/terraform/{{ terraform_version }}/terraform_{{ terraform_version }}_linux_amd64.zip"
     dest: /usr/local/bin
     remote_src: true
     mode: '0755'
@@ -67,4 +76,3 @@
   ansible.builtin.systemd:
     name: opennebula-sunstone
     state: restarted
-  when: sunstone_port is defined
