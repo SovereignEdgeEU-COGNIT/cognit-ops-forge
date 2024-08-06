@@ -71,6 +71,14 @@ resource "aws_security_group" "cloud" {
     cidr_blocks = [aws_subnet.cognit.cidr_block, "${var.local_machine_ip}/32"]
   }
 
+  # Allow access to onegate from everywhere. Virtual Router needs to reach it.
+  ingress {
+    from_port   = 5030
+    to_port     = 5030
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   # Allow access to Prometheus from the cognit subnet
   ingress {
     from_port   = 9090
