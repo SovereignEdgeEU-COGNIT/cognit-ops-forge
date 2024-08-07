@@ -172,6 +172,13 @@ def ansible(infra, opsforge_template)
     infra[:gateway] = infra[:ingress] if opsforge_template[:infra].key?(:hosts)
 
     inventory = {
+        'all' => {
+            'vars' => {
+                'default_gateway' => infra[:gateway],
+                'one_pass' => opsforge_template[:cognit][:cloud][:password],
+                'oned' => "http://#{infra[:cloud]}:2633/RPC2"
+            }
+        },
         'ingress' => {
             'hosts' => {
                 'i1' => {
@@ -192,10 +199,9 @@ def ansible(infra, opsforge_template)
             },
             'vars' => {
                 'ansible_ssh_common_args' => "#{ANSIBLE_SSH_ARGS_COMMON} -o ProxyJump=#{ansible_user}@#{infra[:ingress]}",
-                'default_gateway' => infra[:gateway],
                 'one_version' => opsforge_template[:cognit][:cloud][:version] || ONE_VERSION,
-                'one_pass' => opsforge_template[:cognit][:cloud][:password],
                 'one_token' => opsforge_template[:cognit][:cloud][:ee_token],
+                'gate_endpoint' => "https://#{infra[:ingress]}/onegate",
                 'external_scheduler' => "http://#{infra[:ai_orchestrator]}:4567",
                 'public_fireedge_endpoint' => "https://#{infra[:ingress]}/fireedge",
                 'features' => {
@@ -203,23 +209,33 @@ def ansible(infra, opsforge_template)
                     'gateproxy' => false
                 },
                 'vn' => {
-                    'admin_net' => {
+                    'private_evpn-vxlan' => {
                         'managed' => true,
                         'template' => {
-                            'VN_MAD' => 'bridge',
-                        'PHYDEV' => 'eth0',
-                        'BRIDGE' => 'br0',
-                        'AR' => {
-                            'TYPE' => 'IP4',
-                            'IP' => '172.20.0.100',
-                            'SIZE' => 48,
+                            'VN_MAD' => 'vxlan',
+                            'VXLAN_MODE' => 'evpn',
+                            'IP_LINK_CONF' => 'nolearning',
+                            'PHYDEV' => 'wg0',
+                            'AUTOMATIC_VLAN_ID' => "YES",
+                            'GUEST_MTU' => 1390,
                             'NETWORK_ADDRESS' => '172.20.0.0',
                             'NETWORK_MASK' => '255.255.255.0',
                             'GATEWAY' => '172.20.0.1',
-                            'DNS' => '1.1.1.1'
-                        }
+                            'DNS' => '1.1.1.1',
+                            'AR' => {
+                                'TYPE' => 'IP4',
+                                'IP' => '172.20.0.1',
+                                'SIZE' => 200
+                            }
                         }
                     }
+                }
+            }
+        },
+        'router' => {
+            'hosts' => {
+                'ingress' => {
+                    'ansible_host' => infra[:ingress]
                 }
             }
         },
@@ -234,9 +250,6 @@ def ansible(infra, opsforge_template)
             },
             'vars' => {
                 'ansible_ssh_common_args' => "#{ANSIBLE_SSH_ARGS_COMMON} -o ProxyJump=#{ansible_user}@#{infra[:ingress]}",
-                'default_gateway' => infra[:gateway],
-                'oned' => "http://#{infra[:cloud]}:2633/RPC2",
-                'one_pass' => opsforge_template[:cognit][:cloud][:password],
                 'prometheus' => infra[:cloud]
             }
         },
@@ -248,8 +261,6 @@ def ansible(infra, opsforge_template)
             },
             'vars' => {
                 'ansible_ssh_common_args' => "#{ANSIBLE_SSH_ARGS_COMMON} -o ProxyJump=#{ansible_user}@#{infra[:ingress]}",
-                'default_gateway' => infra[:gateway],
-                'oned' => "http://#{infra[:cloud]}:2633/RPC2",
                 'oneflow' => "http://#{infra[:cloud]}:2474"
             }
         }

@@ -169,7 +169,7 @@ Ingress instance
 PrivateKey = <Ingress private key>
 Address = 192.168.0.1/24
 ListenPort = 51820
-MTU = 1420
+MTU = 1440
 
 [Peer]
 PublicKey = <KVM 1 public key >
@@ -189,7 +189,7 @@ KVM1
 PrivateKey = <KVM 1 private key>
 Address = 192.168.0.2/24
 ListenPort = 51820
-MTU = 1420
+MTU = 1440
 
 [Peer]
 PublicKey = <Ingress Public Key>
@@ -208,7 +208,7 @@ KVM2
 PrivateKey = <KVM2 2 private key>
 Address = 192.168.0.3/24
 ListenPort = 51820
-MTU = 1420
+MTU = 1440
 
 [Peer]
 PublicKey = <Ingress Public Key>
