@@ -1,3 +1,10 @@
+resource "opennebula_cluster" "multi-edge" {
+  name = "multi-edge"
+  # why is deprecated ?
+  datastores = [0, 1]
+  virtual_networks  = [0]
+}
+
 module "opennebula_image_base" {
   source      = "./modules/app"
   name        = "SR"

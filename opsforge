@@ -172,6 +172,13 @@ def ansible(infra, opsforge_template)
     infra[:gateway] = infra[:ingress] if opsforge_template[:infra].key?(:hosts)
 
     inventory = {
+        'all' => {
+            'vars' => {
+                'default_gateway' => infra[:gateway],
+                'one_pass' => opsforge_template[:cognit][:cloud][:password],
+                'oned' => "http://#{infra[:cloud]}:2633/RPC2"
+            }
+        },
         'ingress' => {
             'hosts' => {
                 'i1' => {
@@ -192,35 +199,48 @@ def ansible(infra, opsforge_template)
             },
             'vars' => {
                 'ansible_ssh_common_args' => "#{ANSIBLE_SSH_ARGS_COMMON} -o ProxyJump=#{ansible_user}@#{infra[:ingress]}",
-                'default_gateway' => infra[:gateway],
                 'one_version' => opsforge_template[:cognit][:cloud][:version] || ONE_VERSION,
-                'one_pass' => opsforge_template[:cognit][:cloud][:password],
                 'one_token' => opsforge_template[:cognit][:cloud][:ee_token],
+                'gate_endpoint' => "https://#{infra[:ingress]}/onegate",
                 'external_scheduler' => "http://#{infra[:ai_orchestrator]}:4567",
+                'public_fireedge_endpoint' => "https://#{infra[:ingress]}/fireedge",
                 'features' => {
                     'prometheus' => true,
                     'gateproxy' => false
                 },
                 'vn' => {
-                    'admin_net' => {
+                    'private_evpn-vxlan' => {
                         'managed' => true,
                         'template' => {
-                            'VN_MAD' => 'bridge',
-                        'PHYDEV' => 'eth0',
-                        'BRIDGE' => 'br0',
-                        'AR' => {
-                            'TYPE' => 'IP4',
-                            'IP' => '172.20.0.100',
-                            'SIZE' => 48,
+                            'VN_MAD' => 'vxlan',
+                            'VXLAN_MODE' => 'evpn',
+                            'IP_LINK_CONF' => 'nolearning',
+                            'PHYDEV' => 'wg0',
+                            'AUTOMATIC_VLAN_ID' => "YES",
+                            'GUEST_MTU' => 1390,
                             'NETWORK_ADDRESS' => '172.20.0.0',
                             'NETWORK_MASK' => '255.255.255.0',
                             'GATEWAY' => '172.20.0.1',
-                            'DNS' => '1.1.1.1'
-                        }
+                            'DNS' => '1.1.1.1',
+                            'AR' => {
+                                'TYPE' => 'IP4',
+                                'IP' => '172.20.0.1',
+                                'SIZE' => 200
+                            }
                         }
                     }
                 }
             }
+        },
+        'router' => {
+            'hosts' => {
+                'ingress' => {
+                    'ansible_host' => infra[:ingress]
+                }
+            }
+        },
+        'node' => {
+            'hosts' => {}
         },
         'ai' => {
             'hosts' => {
@@ -230,9 +250,6 @@ def ansible(infra, opsforge_template)
             },
             'vars' => {
                 'ansible_ssh_common_args' => "#{ANSIBLE_SSH_ARGS_COMMON} -o ProxyJump=#{ansible_user}@#{infra[:ingress]}",
-                'default_gateway' => infra[:gateway],
-                'oned' => "http://#{infra[:cloud]}:2633/RPC2",
-                'one_pass' => opsforge_template[:cognit][:cloud][:password],
                 'prometheus' => infra[:cloud]
             }
         },
@@ -244,8 +261,6 @@ def ansible(infra, opsforge_template)
             },
             'vars' => {
                 'ansible_ssh_common_args' => "#{ANSIBLE_SSH_ARGS_COMMON} -o ProxyJump=#{ansible_user}@#{infra[:ingress]}",
-                'default_gateway' => infra[:gateway],
-                'oned' => "http://#{infra[:cloud]}:2633/RPC2",
                 'oneflow' => "http://#{infra[:cloud]}:2474"
             }
         }
@@ -405,19 +420,18 @@ def clean
         cmd_exec("terraform #{cmd}", false)
     end
 
-    # Delete terraform-opennebula state files
-    ['tfstate', 'tfstate.backup', 'tfvars'].each do |tf_file|
-        file = "#{__dir__}/terraform/opennebula/terraform.#{tf_file}"
-        File.delete(file) if File.exist?(file)
-    end
+    deployment_output = {
+        '/terraform/opennebula/terraform.' => ['tfstate', 'tfstate.backup', 'tfvars'],
+        '/ansible/' => ['ansible.cfg', 'inventory.yaml'],
+        '/opsforge' => ['.log']
+    }
 
-    # Delete one-deploy input
-    ['ansible.cfg', 'inventory.yaml'].each do |file|
-        File.delete("#{__dir__}/ansible/#{file}")
+    deployment_output.each do |k, v|
+        v.each do |f|
+            file = "#{__dir__}#{k}#{f}"
+            File.delete(file) if File.exist?(file)
+        end
     end
-
-    # Delete opsforge log
-    File.delete("#{__dir__}/opsforge.log")
 
     puts 'COGNIT deployment succesfully destroyed'
 end

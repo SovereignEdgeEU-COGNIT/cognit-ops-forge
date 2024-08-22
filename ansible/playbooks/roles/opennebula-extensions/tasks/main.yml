@@ -60,7 +60,7 @@
         dest: /var/lib/one/remotes/auth
         owner: oneadmin
         group: oneadmin
-        mode: '0644'
+        mode: '0750'
 
     - name: Enable biscuit auth driver
       ansible.builtin.lineinfile:
