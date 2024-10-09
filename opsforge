@@ -20,7 +20,7 @@ HELP = <<~EOT
     opsforge CLI options
         deploy          -> Deploys the COGNIT architecture on AWS
         clean           -> Frees up the resources on the public cloud
-        build_sr [host] -> Trigger the Serverless Runtime Appliance automated build on [host]
+        build_sr [host] [sr_version] [jumphost] [flavour] -> Trigger the Serverless Runtime Appliance automated build on [host]
         help            -> This help message
 EOT
 
@@ -344,7 +344,7 @@ end
 # @param [String] sr_version Serverless Runtime version to install in the App
 # @param [String] jumphost IP/Hostname of the host used as SSH proxy
 #
-def kiwi(host, sr_version = nil, jumphost = nil)
+def kiwi(host, sr_version = nil, jumphost = nil, flavour = 'serverless_runtime')
     inventory = {
         'kiwi' => {
             'hosts' => {
@@ -356,13 +356,17 @@ def kiwi(host, sr_version = nil, jumphost = nil)
         }
     }
 
-    if jumphost
+    if jumphost && !jumphost.empty?
         inventory['kiwi']['hosts']['kiwi1']['ansible_ssh_common_args'] =
             "-o ProxyJump=root@#{jumphost}"
     end
 
-    if sr_version
+    if sr_version && !jumphost.empty?
         inventory['kiwi']['hosts']['kiwi1']['sr_version'] = sr_version
+    end
+
+    if flavour && !flavour.empty?
+        inventory['kiwi']['hosts']['kiwi1']['flavour'] = flavour
     end
 
     Dir.chdir("#{__dir__}/ansible")

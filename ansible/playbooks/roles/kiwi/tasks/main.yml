@@ -19,15 +19,15 @@
 
 - name: Copy kiwi image description files
   ansible.builtin.copy:
-    src: serverless_runtime
+    src: "{{ flavour }}"
     dest: "{{ kiwi_dest }}/"
     mode: preserve
 
 - name: Use designated serverless runtime version
   ansible.builtin.lineinfile:
-    path: "{{ kiwi_dest }}/serverless_runtime/config.sh"
+    path: "{{ kiwi_dest }}/{{ flavour }}/config.sh"
     regexp: '^SR_VERSION=main'
-    line: "SR_VERSION={{sr_version}}"
+    line: "SR_VERSION={{ sr_version }}"
   when: sr_version is defined
 
 - name: Check if output directory exists and is not empty
@@ -51,7 +51,7 @@
 
 - name: Build kiwi image
   ansible.builtin.command:
-    cmd: kiwi-ng --debug system build --description {{ kiwi_dest }}/serverless_runtime --set-repo obs://openSUSE:Leap:{{ suse_ver }}/standard --target-dir {{ kiwi_dest }}/output
+    cmd: kiwi-ng --debug system build --description {{ kiwi_dest }}/{{ flavour }} --set-repo obs://openSUSE:Leap:{{ suse_ver }}/standard --target-dir {{ kiwi_dest }}/output
   register: kiwi_build
   changed_when: kiwi_build.rc == 0
 
