@@ -40,8 +40,8 @@ Access to these instances can be provided with a Virtual Router (VR), provided t
        +-------------+
        | public ipv4 |
     +-------------------+ +----------------+ +--------------+-------------+
-    | Ingress Controller| |  Cloud-Edge    | | Provisioning | Ai          |
-    |                   | |    Manager     | | Engine       | Orchestrator|
+    | Ingress Controller| |  Cloud-Edge    | | COGNIT       | Ai          |
+    |                   | |    Manager     | | Front-End    | Orchestrator|
     | 10.0.1.x          | |   10.0.1.x     | | 10.0.1.x     | 10.0.1.x    |
     +-------------------+ +----------------+ +--------------+-------------+
              |                 |                  |              |
