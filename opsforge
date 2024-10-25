@@ -46,53 +46,6 @@ def verify_requirements
     end
 end
 
-# TODO
-def verify_deployment(infra, opsforge_template)
-    # checks = {
-    #     :engine => {
-    #         :oned_reachable => false,
-    #         :oneflow_reachable => false,
-    #         :port => true
-    #     },
-    #     :cloud => {
-    #         :api => false,
-    #         :version => false,
-    #         :web_ports => {
-    #             :main => false,
-    #             :next_gen => false
-    #         },
-    #         :ai_orchestrator_reachable => false
-    #     }
-
-    # }
-
-    # engine_port = nil
-    # sunstone_port = nil
-    # fireedge_port = nil
-    # one_version = ONE_VERSION
-
-    # # Check provision Engine
-    # if opsforge_template[:cognit].key?(:engine)
-    #     engine_port = opsforge_template[:cognit][:engine][:port] || 1337
-    # end
-
-    # checks[:engine][:port] = true if socket?(infra[:engine], engine_port)
-
-    # # Check Cloud-Edge Manager
-    # if opsforge_template[:cognit][:cloud].key?(:web_ports)
-    #     sunstone_port = opsforge_template[:cognit][:cloud][:web_ports][:main] || 9869
-    #     fireedge_port = opsforge_template[:cognit][:cloud][:web_ports][:next_gen] || 2616
-    # end
-
-    # if opsforge_template[:cognit][:cloud].key?(:version)
-    #     one_version = opsforge_template[:cognit][:cloud][:version] || ONE_VERSION
-    # end
-
-    # checks[:cloud][:api] = true if socket?(infra[:cloud], 2633)
-    # checks[:cloud][:web_ports][:main] = true if socket?(infra[:cloud], sunstone_port)
-    # checks[:cloud][:web_ports][:next_gen] = true if socket?(infra[:cloud], fireedge_port)
-end
-
 #
 # Check if the provided opsforge template complies with the schema
 #
@@ -126,7 +79,7 @@ def terraform_aws(opsforge_template)
     tfvars_content = "local_machine_ip = \"#{public_ip}\"\n"
     opsforge_template[:infra][:aws].each {|k, v| tfvars_content << "#{k} = \"#{v}\"\n" }
 
-    tfvars_content << "engine_port = #{opsforge_template[:cognit][:engine][:port]}\n" if opsforge_template[:cognit].key?(:engine) && opsforge_template[:cognit][:engine][:port]
+    tfvars_content << "frontend_port = #{opsforge_template[:cognit][:frontend][:port]}\n" if opsforge_template[:cognit].key?(:frontend) && opsforge_template[:cognit][:frontend][:port]
 
     if opsforge_template[:cognit].key?(:cloud) && opsforge_template[:cognit][:cloud].key?(:web_ports)
         tfvars_content << "sunstone_port = #{opsforge_template[:cognit][:cloud][:web_ports][:main]}\n" if opsforge_template[:cognit][:cloud][:web_ports][:main]
@@ -139,7 +92,7 @@ def terraform_aws(opsforge_template)
 
     ec2_instances = {}
 
-    ['cloud', 'engine', 'ai_orchestrator'].each do |ec2|
+    ['cloud', 'frontend', 'ai_orchestrator'].each do |ec2|
         ec2_instances[ec2.to_sym] = infra[ec2]['value']['private_ip']
     end
 
@@ -158,7 +111,7 @@ end
 # @param [Hash] opsforge_template opsforge yaml template contents
 #
 def ansible(infra, opsforge_template)
-    puts 'Installing Cloud-Edge Manager, Provisioning Engine and AI Orchestrator'
+    puts 'Installing Cloud-Edge Manager, COGNIT Frontend and AI Orchestrator'
 
     Dir.chdir("#{__dir__}/ansible/one-deploy")
     cmd_exec('make requirements')
@@ -187,11 +140,11 @@ def ansible(infra, opsforge_template)
             },
             'vars' => {
                 'domain_name' => infra[:ingress],
-                'engine_instance_ip' => infra[:engine],
-                'frontend_instance_ip' => infra[:cloud]
+                'frontend_instance_ip' => infra[:frontend],
+                'cloud_instance_ip' => infra[:cloud]
             }
         },
-        'frontend' => {
+        'cloud' => {
             'hosts' => {
                 'f1' => {
                     'ansible_host' => infra[:cloud]
@@ -216,7 +169,7 @@ def ansible(infra, opsforge_template)
                             'VXLAN_MODE' => 'evpn',
                             'IP_LINK_CONF' => 'nolearning',
                             'PHYDEV' => 'wg0',
-                            'AUTOMATIC_VLAN_ID' => "YES",
+                            'AUTOMATIC_VLAN_ID' => 'YES',
                             'GUEST_MTU' => 1390,
                             'NETWORK_ADDRESS' => '172.20.0.0',
                             'NETWORK_MASK' => '255.255.255.0',
@@ -253,10 +206,10 @@ def ansible(infra, opsforge_template)
                 'prometheus' => infra[:cloud]
             }
         },
-        'engine' => {
+        'cognit_frontend' => {
             'hosts' => {
                 'e1' => {
-                    'ansible_host' => infra[:engine]
+                    'ansible_host' => infra[:frontend]
                 }
             },
             'vars' => {
@@ -283,11 +236,11 @@ def ansible(infra, opsforge_template)
             opsforge_template[:cognit][:cloud][:web_ports][:main] if opsforge_template[:cognit][:cloud][:web_ports].key?(:main)
     end
 
-    if opsforge_template[:cognit].key?(:engine)
-        inventory['engine']['vars']['engine_port'] =
-            opsforge_template[:cognit][:engine][:port] if opsforge_template[:cognit][:engine][:port]
-        inventory['engine']['vars']['version'] =
-            opsforge_template[:cognit][:engine][:version] if opsforge_template[:cognit][:engine][:version]
+    if opsforge_template[:cognit].key?(:frontend)
+        inventory['frontend']['vars']['frontend_port'] =
+            opsforge_template[:cognit][:frontend][:port] if opsforge_template[:cognit][:frontend][:port]
+        inventory['frontend']['vars']['version'] =
+            opsforge_template[:cognit][:frontend][:version] if opsforge_template[:cognit][:frontend][:version]
     end
 
     inventory['ai']['vars']['version'] =
@@ -333,7 +286,7 @@ def ansible(infra, opsforge_template)
     cmd_exec('ansible-playbook playbooks/cognit.yaml')
     Dir.chdir("#{__dir__}/..")
 
-    puts 'Frontend and Provisioning Engine installed'
+    puts 'OpenNebula and COGNIT Frontend installed'
 end
 
 #
@@ -633,7 +586,7 @@ when 'deploy'
 
         Access
         - Cloud-Edge Manager credentials: oneadmin:#{opsforge_template[:cognit][:cloud][:password]}
-        - Provision Engine: https://#{infra[:ingress]}/engine
+        - COGNIT Frontend:  https://#{infra[:ingress]}/frontend
         - Stable Web UI:    https://#{infra[:ingress]}/sunstone
         - Next Gen Web UI:  https://#{infra[:ingress]}/fireedge
         #{ssh_connection}

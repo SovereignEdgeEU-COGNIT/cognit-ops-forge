@@ -1,78 +1,33 @@
 ---
-- name: Check if external scheduler configuration exists
-  ansible.builtin.shell: grep -qE '^[[:space:]]*EXTERNAL_SCHEDULER' /etc/one/sched.conf
-  register: scheduler_check
-  changed_when: false
-  failed_when: false
-
-- name: Add external scheduler configuration
-  ansible.builtin.blockinfile:
-    path: /etc/one/sched.conf
-    block: |
-      EXTERNAL_SCHEDULER = [
-          SERVER = "{{ external_scheduler }}",
-          PROXY = "",
-          TIMEOUT = 10
-      ]
-  when: scheduler_check.rc != 0
-  register: config_update
-
-- name: Restart opennebula-scheduler service
-  ansible.builtin.systemd:
-    name: opennebula-scheduler
-    state: restarted
-  when: config_update.changed
-
-- name: Install opennebula-provision
-  ansible.builtin.package:
-    name: opennebula-provision
-    state: present
+- name: Clone Cognit Frontend repo
+  ansible.builtin.git:
+    repo: "{{ repo_url }}"
+    dest: "{{ repo_dest }}"
+    force: true
+    version: "{{ version | default('main') }}"
 
 - name: Install python3-pip
   ansible.builtin.package:
     name: python3-pip
     state: present
 
-- name: Install pip dependencies for OpenNebula Edge Clusters provisioning
+- name: Install pip dependencies
   ansible.builtin.pip:
-    name: "{{ oneprovision_pip_dependencies }}"
+    requirements: "{{ repo_dest }}/requirements.txt"
     state: present
 
-- name: Install Terraform
-  ansible.builtin.unarchive:
-    src: "https://releases.hashicorp.com/terraform/{{ terraform_version }}/terraform_{{ terraform_version }}_linux_amd64.zip"
-    dest: /usr/local/bin
-    remote_src: true
-    mode: '0755'
-    creates: /usr/local/bin/terraform
+- name: Configure COGNIT Frontend
+  ansible.builtin.template:
+    src: cognit-frontend.conf.j2
+    dest: /etc/cognit-frontend.conf
 
-- name: Update FireEdge Port
-  ansible.builtin.lineinfile:
-    path: /etc/one/fireedge-server.conf
-    regexp: '^port:\s*\d+$'
-    line: "port: {{ fireedge_port }}"
-  when: fireedge_port is defined
+- name: Start COGNIT Frontend
+  ansible.builtin.shell: |
+    "nohup python3 {{ repo_dest }}/src/main.py > /var/log/uvicorn.log 2>&1 &"
+  args:
+    chdir: "{{ project_root | default('/root') }}"
 
-- name: Restart opennebula-fireedge service
-  ansible.builtin.systemd:
-    name: opennebula-fireedge
-    state: restarted
-  when: fireedge_port is defined
-
-- name: Update Sunstone Port
-  ansible.builtin.lineinfile:
-    path: /etc/one/sunstone-server.conf
-    regexp: '^port:\s*\d+$'
-    line: "port: {{ sunstone_port }}"
-  when: sunstone_port is defined
-
-- name: Update Sunstone FireEdge public endpoint
-  ansible.builtin.lineinfile:
-    path: /etc/one/sunstone-server.conf
-    regexp: '^public_fireedge_endpoint::\s*\d+$'
-    line: "public_fireedge_endpoint:: {{ public_fireedge_endpoint }}"
-
-- name: Restart opennebula-sunstone service
-  ansible.builtin.systemd:
-    name: opennebula-sunstone
-    state: restarted
+- name: Wait for uvicorn to start
+  ansible.builtin.wait_for:
+    port: 1338
+    timeout: 5

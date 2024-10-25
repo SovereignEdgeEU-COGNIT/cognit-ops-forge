@@ -58,6 +58,35 @@ data "aws_ssm_parameter" "ubuntu" {
 
 
 
+<<<<<<< Updated upstream
+=======
+# Create AI Orchestrator EC2 Instance
+
+resource "aws_instance" "ai" {
+  tags = {
+    Name = "cognit-AI_Orchestrator"
+  }
+  instance_type = var.aws_instance_type
+  ami           = data.aws_ssm_parameter.ubuntu.value
+  root_block_device {
+    volume_size = var.aws_volume_size
+  }
+  subnet_id                   = aws_subnet.cognit.id
+  key_name                    = var.aws_ssh_key
+  vpc_security_group_ids      = [aws_security_group.engine.id]
+  associate_public_ip_address = true
+  connection {
+    type        = "ssh"
+    user        = var.ssh_user
+    private_key = file(var.aws_ssh_key_path)
+    host        = self.public_dns
+  }
+}
+
+# Security Group for Frontend
+resource "aws_security_group" "frontend" {
+  vpc_id = aws_vpc.opsforge.id
+>>>>>>> Stashed changes
 
 
 
