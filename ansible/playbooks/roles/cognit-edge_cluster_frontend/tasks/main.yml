@@ -16,16 +16,16 @@
     requirements: "{{ repo_dest }}/requirements.txt"
     state: present
 
-- name: Configure COGNIT Frontend
+- name: Configure Edge Cluster Frontend
   ansible.builtin.template:
     src: "{{ conf_file }}.j2"
     dest: "/etc/{{ conf_file }}"
 
-- name: Start COGNIT Frontend
+- name: Start Edge Cluster Frontend
   ansible.builtin.shell: |
     "nohup python3 {{ repo_dest }}/src/main.py > /var/log/uvicorn.log 2>&1 &"
 
 - name: Wait for uvicorn to start
   ansible.builtin.wait_for:
-    port: "{{ port }}"
+    port: "{{ api_port }}"
     timeout: 5

@@ -1,5 +1,5 @@
 # Create COGNIT Frontend EC2 Instance
-resource "aws_instance" "engine" {
+resource "aws_instance" "frontend" {
   tags = {
     Name = "cognit-frontend"
   }
