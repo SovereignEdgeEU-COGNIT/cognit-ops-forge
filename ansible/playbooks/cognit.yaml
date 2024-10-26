@@ -19,7 +19,6 @@
 - name: Setup COGNIT Cloud-Edge Manager
   hosts: "{{ cloud_group | d('cloud') }}"
   roles:
-    - biscuit
     - opennebula-extensions
     - cloud
 

@@ -20,12 +20,24 @@
   ansible.builtin.template:
     src: "{{ conf_file }}.j2"
     dest: "/etc/{{ conf_file }}"
+    mode: "0644"
+
+- name: Get PID of process running on COGNIT Frontend port
+  ansible.builtin.command: lsof -ti:{{ api_port }}
+  register: pid
+  changed_when: pid.rc != 0
+
+- name: Kill the process if it exists
+  ansible.builtin.command: kill -9 {{ pid.stdout }}
+  when: pid.stdout != ""
+  ignore_errors: true
 
 - name: Start COGNIT Frontend
   ansible.builtin.shell: |
     "nohup python3 {{ repo_dest }}/src/main.py > /var/log/uvicorn.log 2>&1 &"
+  changed_when: false
 
 - name: Wait for uvicorn to start
   ansible.builtin.wait_for:
-    port: "{{ port }}"
+    port: "{{ api_port }}"
     timeout: 5
