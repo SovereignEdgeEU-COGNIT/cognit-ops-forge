@@ -32,5 +32,5 @@
     jump: DNAT
     to_destination: "{{ item.dest_host }}:{{ item.port }}"
   loop:
-    - { port: 2633, dest_host: "{{ cloud_instance_ip }}" }
-    - { port: 2474, dest_host: "{{ cloud_instance_ip }}" }
+    - { port: 2633, dest_host: "{{ one_frontend_instance_ip }}" }
+    - { port: 2474, dest_host: "{{ one_frontend_instance_ip }}" }

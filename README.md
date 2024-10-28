@@ -45,7 +45,7 @@ As such, there are some requirements that need to be met in order to run the pro
 
 - [ruby](https://www.ruby-lang.org/en/documentation/installation/) 3.2.2 and the gem [json-schema](https://rubygems.org/gems/json-schema) 4.1.1
 - [terraform](https://developer.hashicorp.com/terraform/install?product_intent=terraform) 1.5.7
-- [ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) 2.16.2
+- [ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) 2.17.5 and the
   - [one-deploy](https://github.com/OpenNebula/one-deploy/releases/tag/release-1.0.0) is a required git submodule
 - If using AWS
   - [awscli](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) 2.15.30

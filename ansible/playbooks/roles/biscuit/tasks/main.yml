@@ -1,24 +1,25 @@
 ---
 - name: Download Biscuit CLI
-  get_url:
+  ansible.builtin.get_url:
     url: "https://github.com/biscuit-auth/biscuit-cli/releases/download/{{ biscuit_version }}/biscuit-{{ biscuit_version }}-x86_64-unknown-linux-musl.tar.gz"
     dest: "{{ biscuit_tmp }}.tar.gz"
+  mode: '0755'
 
 - name: Extract Biscuit CLI
-  unarchive:
+  ansible.builtin.unarchive:
     src: "{{ biscuit_tmp }}.tar.gz"
     dest: /tmp
     remote_src: true
 
 - name: Install Biscuit CLI
-  copy:
+  ansible.builtin.copy:
     src: "{{ biscuit_tmp }}/biscuit"
     remote_src: true
     dest: "/usr/bin"
-    mode: 0755
+    mode: '0755'
 
 - name: Clean up temporary files
-  file:
+  ansible.builtin.file:
     path: "{{ item }}"
     state: absent
   with_items:

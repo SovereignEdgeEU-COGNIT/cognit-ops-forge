@@ -3,13 +3,13 @@
   ansible.builtin.git:
     repo: "{{ repo_url }}"
     dest: "{{ repo_dest }}"
-    force: true
     version: "{{ version | default('main') }}"
 
 - name: Install python3-pip
   ansible.builtin.package:
     name: python3-pip
     state: present
+    update-cache: true
 
 - name: Install pip dependencies
   ansible.builtin.pip:
@@ -22,20 +22,27 @@
     dest: "/etc/{{ conf_file }}"
     mode: "0644"
 
-- name: Get PID of process running on COGNIT Frontend port
+- name: Get PID of process running on uvicorn port
   ansible.builtin.command: lsof -ti:{{ api_port }}
   register: pid
-  changed_when: pid.rc != 0
+  ignore_errors: true
+  changed_when: pid.rc == 0
+  failed_when: pid.rc != 0
 
 - name: Kill the process if it exists
   ansible.builtin.command: kill -9 {{ pid.stdout }}
-  when: pid.stdout != ""
   ignore_errors: true
+  register: kill
+  changed_when: kill.rc == 0
+  failed_when: kill.rc != 0
+  when: pid
 
-- name: Start Edge Cluster Frontend
+- name: Start uvicorn
   ansible.builtin.shell: |
-    "nohup python3 {{ repo_dest }}/src/main.py > /var/log/uvicorn.log 2>&1 &"
-  changed_when: false
+    nohup python3 {{ repo_dest }}/src/main.py > /var/log/uvicorn.log 2>&1 &
+  register: uvicorn
+  changed_when: uvicorn.rc == 0
+  failed_when: uvicorn.rc != 0
 
 - name: Wait for uvicorn to start
   ansible.builtin.wait_for:

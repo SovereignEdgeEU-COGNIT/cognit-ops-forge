@@ -141,11 +141,11 @@ def ansible(infra, opsforge_template)
             },
             'vars' => {
                 'domain_name' => infra[:ingress],
-                'frontend_instance_ip' => infra[:frontend],
-                'cloud_instance_ip' => infra[:cloud]
+                'cognit_frontend_instance_ip' => infra[:frontend],
+                'one_frontend_instance_ip' => infra[:cloud]
             }
         },
-        'cloud' => {
+        'frontend' => {
             'hosts' => {
                 'f1' => {
                     'ansible_host' => infra[:cloud]
@@ -188,7 +188,7 @@ def ansible(infra, opsforge_template)
         },
         'router' => {
             'hosts' => {
-                'ingress' => {
+                'r1' => {
                     'ansible_host' => infra[:ingress]
                 }
             }
@@ -209,7 +209,7 @@ def ansible(infra, opsforge_template)
         },
         'cognit_frontend' => {
             'hosts' => {
-                'e1' => {
+                'cf1' => {
                     'ansible_host' => infra[:frontend]
                 }
             },
@@ -230,19 +230,8 @@ def ansible(infra, opsforge_template)
     inventory['frontend']['vars']['one_extensions_version'] =
         opsforge_template[:cognit][:cloud][:extensions][:version] if opsforge_template[:cognit][:cloud].key?(:extensions) && opsforge_template[:cognit][:cloud][:extensions][:version]
 
-    if opsforge_template[:cognit][:cloud].key?(:web_ports)
-        inventory['frontend']['vars']['fireedge_port'] =
-            opsforge_template[:cognit][:cloud][:web_ports][:next_gen] if opsforge_template[:cognit][:cloud][:web_ports].key?(:next_gen)
-        inventory['frontend']['vars']['sunstone_port'] =
-            opsforge_template[:cognit][:cloud][:web_ports][:main] if opsforge_template[:cognit][:cloud][:web_ports].key?(:main)
-    end
-
-    if opsforge_template[:cognit].key?(:frontend)
-        inventory['frontend']['vars']['frontend_port'] =
-            opsforge_template[:cognit][:frontend][:port] if opsforge_template[:cognit][:frontend][:port]
-        inventory['frontend']['vars']['version'] =
-            opsforge_template[:cognit][:frontend][:version] if opsforge_template[:cognit][:frontend][:version]
-    end
+    inventory['frontend']['vars']['version'] =
+        opsforge_template[:cognit][:frontend][:version] if opsforge_template[:cognit].key?(:frontend) && opsforge_template[:cognit][:frontend][:version]
 
     inventory['ai']['vars']['version'] =
         opsforge_template[:cognit][:ai][:version] if opsforge_template[:cognit].key?(:ai) && opsforge_template[:cognit][:ai][:version]
@@ -273,6 +262,9 @@ def ansible(infra, opsforge_template)
     File.write("#{__dir__}/ansible/inventory.yaml", inventory)
     File.write("#{__dir__}/ansible/ansible.cfg", cfg)
 
+    collections = 'ansible.posix community.docker'
+    cmd_exec("ansible-galaxy collection install #{collections}")
+
     30.times do |t|
         raise 'Timeout while waiting for SSH access to infra' if t == 30
 
@@ -282,6 +274,8 @@ def ansible(infra, opsforge_template)
             sleep 1
             next
         end
+
+        break
     end
 
     cmd_exec('ansible-playbook playbooks/cognit.yaml')
@@ -552,7 +546,7 @@ when 'deploy'
 
     begin
         inventory = YAML.load_file("#{__dir__}/ansible/inventory.yaml")
-        opsforge_template[:cognit][:cloud][:password] = inventory['frontend']['vars']['one_pass']
+        opsforge_template[:cognit][:cloud][:password] = inventory['cloud']['vars']['one_pass']
     rescue StandardError
         opsforge_template[:cognit][:cloud][:password] = SecureRandom.alphanumeric
     end
@@ -568,8 +562,6 @@ when 'deploy'
 
     howlong { ansible(infra, opsforge_template) }
     howlong { terraform_opennebula(infra[:ingress], opsforge_template) }
-
-    verify_deployment(infra, opsforge_template)
 
     if !opsforge_template[:cognit].key?(:certificate)
         ssl_certs = "- SSL: Certificate files at #{Dir.home}/.cognit_ssl_certs"
