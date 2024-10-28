@@ -74,7 +74,7 @@ resource "aws_security_group" "ingress" {
   }
 
   # Allow Web traffic from everywhere
-  # Redirect for Sunstone, FireEdge and Provisioning Engine
+  # Redirect for Sunstone, FireEdge and COGNIT Frontend
   ingress {
     from_port   = 80
     to_port     = 80

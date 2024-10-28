@@ -8,7 +8,7 @@
 - name: Apply routing to all relevant hosts
   hosts:
     - "{{ frontend_group | d('frontend') }}"
-    - "{{ engine_group | d('engine') }}"
+    - "{{ cognit_frontend_group | d('cognit_frontend') }}"
     - "{{ ai_group | d('ai') }}"
   roles:
     - route
@@ -19,16 +19,16 @@
 - name: Setup COGNIT Cloud-Edge Manager
   hosts: "{{ frontend_group | d('frontend') }}"
   roles:
-    - biscuit
     - opennebula-extensions
-    - cognit_frontend # TODO: Rename to cognit opennebula frontend
+    - one_frontend
 
-- name: Setup provision-engine
-  hosts: "{{ engine_group | d('engine') }}"
+- name: Setup COGNIT Frontend
+  hosts: "{{ cognit_frontend_group | d('cognit_frontend') }}"
   roles:
-    - engine
+    - cognit_frontend
 
 - name: Setup ai-orchestrator
+  gather_facts: true
   hosts: "{{ ai_group | d('ai') }}"
   roles:
     - ai

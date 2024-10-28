@@ -1,7 +1,7 @@
-# Create Engine EC2 Instance
-resource "aws_instance" "engine" {
+# Create COGNIT Frontend EC2 Instance
+resource "aws_instance" "frontend" {
   tags = {
-    Name = "cognit-provision_engine"
+    Name = "cognit-frontend"
   }
   instance_type = var.ec2_instance_type
   ami           = data.aws_ssm_parameter.ubuntu.value
@@ -10,7 +10,7 @@ resource "aws_instance" "engine" {
   }
   subnet_id                   = aws_subnet.cognit.id
   key_name                    = var.ssh_key
-  vpc_security_group_ids      = [aws_security_group.engine.id]
+  vpc_security_group_ids      = [aws_security_group.frontend.id]
   connection {
     type        = "ssh"
     user        = var.ssh_user
@@ -19,8 +19,8 @@ resource "aws_instance" "engine" {
   }
 }
 
-# Security Group for Provision Engine
-resource "aws_security_group" "engine" {
+# Security Group for COGNIT Frontend
+resource "aws_security_group" "frontend" {
   vpc_id = aws_vpc.opsforge.id
 
   # Allow all outbound traffic
@@ -39,10 +39,10 @@ resource "aws_security_group" "engine" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Allow engine traffic from the COGNIT subnet only
+  # Allow frontend traffic from the COGNIT subnet only
   ingress {
-    from_port   = var.engine_port
-    to_port     = var.engine_port
+    from_port   = var.frontend_port
+    to_port     = var.frontend_port
     protocol    = "tcp"
     cidr_blocks = [ aws_subnet.cognit.cidr_block ]
   }

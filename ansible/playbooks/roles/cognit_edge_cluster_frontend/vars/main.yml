@@ -1,0 +1,5 @@
+---
+repo_url: https://github.com/SovereignEdgeEU-COGNIT/edgecluster-frontend.git
+repo_dest: /home/ubuntu/edgecluster-frontend
+api_port: 1339
+conf_file: cognit-edge_cluster_frontend.conf

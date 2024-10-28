@@ -19,7 +19,7 @@ The COGNIT Stack is built using the following components:
 OpsForge will automatically deploy and configure the following components on the target infrastructure:
 
 - [OpenNebula Frontend node](https://docs.opennebula.io/STS/installation_and_configuration/frontend_installation/overview.html). All needed resources, like the Serverless Runtime templates, are created.
-- [Provision Engine](https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine)
+- [COGNIT Frontend](https://github.com/SovereignEdgeEU-COGNIT/cognit-frontend)
 - [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator)
 - [Serverless Runtime](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime) appliance
 
@@ -45,7 +45,7 @@ As such, there are some requirements that need to be met in order to run the pro
 
 - [ruby](https://www.ruby-lang.org/en/documentation/installation/) 3.2.2 and the gem [json-schema](https://rubygems.org/gems/json-schema) 4.1.1
 - [terraform](https://developer.hashicorp.com/terraform/install?product_intent=terraform) 1.5.7
-- [ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) 2.16.2
+- [ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) 2.17.5 and the
   - [one-deploy](https://github.com/OpenNebula/one-deploy/releases/tag/release-1.0.0) is a required git submodule
 - If using AWS
   - [awscli](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) 2.15.30
@@ -73,8 +73,8 @@ The deployment will be conducted as follows
             |
             |
     +-------v-----------+ +----------------+ +--------------+-------------+
-    | Ingress Controller| |  Cloud-Edge    | | Provisioning | Ai          |
-    | public ipv4       | |    Manager     | | Engine       | Orchestrator|
+    | Ingress Controller| |  Cloud-Edge    | | COGNIT       | Ai          |
+    | public ipv4       | |    Manager     | | Frontend     | Orchestrator|
     | 10.0.1.x          | |   10.0.1.x     | | 10.0.1.x     | 10.0.1.x    |
     +-------------------+ +----------------+ +--------------+-------------+
              |                 |                  |              |
@@ -82,7 +82,7 @@ The deployment will be conducted as follows
                                 10.0.1.0/24
 ```
 
-The Ingress controller is a special host which hides the COGNIT components behind a web server, providing API redirection for the Cloud-Edge manager web interfaces and the Provisioning Engine with SSL encryption. It also acts as a management entry point, working as an SSH jump host/bastion. Finally, it also acts as a router for the private subnet hosting the COGNIT components.
+The Ingress controller is a special host which hides the COGNIT components behind a web server, providing API redirection for the Cloud-Edge manager web interfaces and the COGNIT Frontend with SSL encryption. It also acts as a management entry point, working as an SSH jump host/bastion. Finally, it also acts as a router for the private subnet hosting the COGNIT components.
 When deploying with AWS, these conditions will be automatically met. When deploying on-premises/with managed hosts, these conditions must be previously present.
 
 SSL certificates can be passed in the template with
@@ -117,21 +117,21 @@ Example
 
 When finished, you should receive information about how to connect to each instance. For example
 
-```json
+```
 Frontend ready for Cognit
 Took 63.20396 seconds
 
 Infrastructure
 {
   "cloud": "10.0.1.72",
-  "engine": "10.0.1.236",
+  "frontend": "10.0.1.236",
   "ai_orchestrator": "10.0.1.45",
   "ingress": "ec2-3-72-10-111.eu-central-1.compute.amazonaws.com"
 }
 
 Access
 - Cloud-Edge Manager credentials: oneadmin:uCw1NhdNyJ9g7OAd
-- Provision Engine: https://ec2-3-72-10-111.eu-central-1.compute.amazonaws.com/engine
+- COGNIT Frontend: https://ec2-3-72-10-111.eu-central-1.compute.amazonaws.com/frontend
 - Stable Web UI:    https://ec2-3-72-10-111.eu-central-1.compute.amazonaws.com/sunstone
 - Next Gen Web UI:  https://ec2-3-72-10-111.eu-central-1.compute.amazonaws.com/fireedge
 - SSH: Connect to the host "ec2-3-72-10-111.eu-central-1.compute.amazonaws.com" with the "ubuntu" user, using the provided ssh key. You can access the rest of the cluster using this host as an SSH jump host.
@@ -158,7 +158,7 @@ Example
   :hosts:
     :ingress: 172.20.0.1
     :cloud: 172.20.0.4
-    :engine: 172.20.0.9
+    :frontend: 172.20.0.9
     :ai_orchestrator: 172.20.17
 :cognit:
   :app:
@@ -166,10 +166,10 @@ Example
   :certificate:
     :crt: '~/certificate.crt'
     :key: '~/certificate.key'
-  :engine:
-    :version: release-1.3.4
+  :frontend:
+    :version: release-cognit-2.0
   :ai_orchestrator:
-    :version: dev_branch
+    :version: release-cognit-1.0
   :cloud:
     :version: 6.8
     :ee_token: <enterprise_edition token for Cloud Edge Manager>

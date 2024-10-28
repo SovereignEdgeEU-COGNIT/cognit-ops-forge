@@ -24,11 +24,18 @@
     group: root
     mode: '0644'
 
+- name: Check if prometheus_vm_discovery hook exists
+  ansible.builtin.command: "onehook show host_geolocation"
+  register: prometheus_vm_discovery
+  changed_when: false
+  failed_when: false
+
 - name: Prometheus - VM Hook
   ansible.builtin.command: "onehook create {{ repo_dest }}/prometheus/vm.hook"
   register: hook_result
   failed_when: hook_result.rc != 0
   changed_when: hook_result.rc == 0
+  when: prometheus_vm_discovery.rc == 0
 
 - name: Geolocation - Logic
   ansible.builtin.copy:
@@ -39,53 +46,18 @@
     group: root
     mode: '0644'
 
+- name: Check if host_geolocation hook exists
+  ansible.builtin.command: "onehook show host_geolocation"
+  register: geolocation_check
+  changed_when: false
+  failed_when: false
+
 - name: Geolocation - VM Hook
   ansible.builtin.command: "onehook create {{ repo_dest }}/geolocation/geo.hook"
   register: hook_result
   failed_when: hook_result.rc != 0
   changed_when: hook_result.rc == 0
-
-- name: Check if biscuit auth driver directory exists
-  ansible.builtin.stat:
-    path: "{{ repo_dest }}/biscuit"
-  register: biscuit_driver
-
-- name: Configure biscuit auth driver
-  when: biscuit_driver.stat.exists
-  block:
-    - name: Install biscuit auth driver
-      ansible.builtin.copy:
-        src: "{{ repo_dest }}/biscuit"
-        remote_src: true
-        dest: /var/lib/one/remotes/auth
-        owner: oneadmin
-        group: oneadmin
-        mode: '0750'
-
-    - name: Enable biscuit auth driver
-      ansible.builtin.lineinfile:
-        path: /etc/one/oned.conf
-        regexp: '^AUTHN\s*='
-        line: 'AUTHN = "ssh,x509,ldap,server_cipher,server_x509,biscuit"'
-        state: present
-
-    - name: Add AUTH_MAD_CONF block to oned.conf
-      ansible.builtin.blockinfile:
-        path: /etc/one/oned.conf
-        block: |
-          AUTH_MAD_CONF = [
-              NAME = "biscuit",
-              PASSWORD_CHANGE = "YES",
-              DRIVER_MANAGED_GROUPS = "NO",
-              DRIVER_MANAGED_GROUP_ADMIN = "NO",
-              MAX_TOKEN_TIME = "-1"
-          ]
-        state: present
-
-    - name: Restart OpenNebula service
-      ansible.builtin.systemd:
-        name: opennebula
-        state: restarted
+  when: geolocation_check.rc == 0
 
 - name: Delete opennebula-extensions GitHub repository
   ansible.builtin.file:

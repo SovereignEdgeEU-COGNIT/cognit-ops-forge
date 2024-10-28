@@ -1,24 +1,45 @@
 ---
-- name: Install dependencies
+- name: Install prerequisites
   ansible.builtin.apt:
-    pkg:
-      - docker.io
-      - docker-compose
-      - python3
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg-agent
+      - software-properties-common
     state: present
     update_cache: true
 
-- name: Ensure Docker is started and enabled
-  ansible.builtin.systemd:
+- name: Add Docker GPG key
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+
+- name: Install Docker and dependencies
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+
+- name: Ensure Docker service is started and enabled
+  ansible.builtin.service:
     name: docker
     state: started
     enabled: true
 
 - name: Run Docker Compose
-  docker_compose:
+  community.docker.docker_compose_v2:
     state: present
     recreate: always
-    pull: yes
+    pull: missing
     project_name: cognit-ai-orchestrator
     definition:
       version: '3.8'
@@ -76,4 +97,3 @@
           command: sh -c "python3 /MLServer/server.py"
       volumes:
         timescaledb_data:
-

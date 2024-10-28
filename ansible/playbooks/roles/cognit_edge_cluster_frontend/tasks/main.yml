@@ -16,7 +16,7 @@
     requirements: "{{ repo_dest }}/requirements.txt"
     state: present
 
-- name: Configure COGNIT Frontend
+- name: Configure Edge Cluster Frontend
   ansible.builtin.template:
     src: "{{ conf_file }}.j2"
     dest: "/etc/{{ conf_file }}"

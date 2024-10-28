@@ -41,3 +41,6 @@ opsforge.log
 
 # Ignore asciinema files
 *.cast
+
+*.DS_Store
+.vscode/

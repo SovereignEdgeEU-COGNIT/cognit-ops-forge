@@ -2,6 +2,6 @@
 sunstone_port: 9869
 fireedge_port: 2616
 onegate_port: 5030
-engine_port: 1337
+frontend_port: 1338
 cert_crt: /etc/nginx/ssl/certificate.crt
 cert_key: /etc/nginx/ssl/certificate.key

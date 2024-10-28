@@ -19,35 +19,39 @@ http {
         ssl_certificate_key /etc/nginx/ssl/certificate.key;
 
         location / {
-            proxy_pass http://{{ frontend_instance_ip }}:{{ sunstone_port }}/;
+            proxy_pass http://{{ one_frontend_instance_ip }}:{{ sunstone_port }}/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         }
 
-        location /engine/ {
-            proxy_pass http://{{ engine_instance_ip }}:{{ engine_port }}/;
+        location /frontend/ {
+            proxy_pass http://{{ cognit_frontend_instance_ip }}:{{ frontend_port }}/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Origin $http_origin;
+            proxy_set_header X-Forwarded-Host $host;
         }
 
         location /onegate/ {
-            proxy_pass http://{{ frontend_instance_ip }}:{{ onegate_port }}/;
+            proxy_pass http://{{ one_frontend_instance_ip }}:{{ onegate_port }}/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         }
 
         location /sunstone/ {
-            proxy_pass http://{{ frontend_instance_ip }}:{{ sunstone_port }}/;
+            proxy_pass http://{{ one_frontend_instance_ip }}:{{ sunstone_port }}/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         }
 
         location /fireedge/ {
-            proxy_pass http://{{ frontend_instance_ip }}:{{ fireedge_port }}/fireedge/;
+            proxy_pass http://{{ one_frontend_instance_ip }}:{{ fireedge_port }}/fireedge/;
             proxy_redirect off;
             log_not_found off;
             proxy_buffering off;

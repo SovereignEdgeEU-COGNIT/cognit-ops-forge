@@ -36,9 +36,9 @@ variable "sunstone_port" {
   default = 9869
 }
 
-variable "engine_port" {
+variable "frontend_port" {
   type    = number
-  default = 1337
+  default = 1338
 }
 
 

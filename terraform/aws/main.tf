@@ -54,16 +54,3 @@ resource "aws_route_table_association" "opsforge" {
 data "aws_ssm_parameter" "ubuntu" {
   name = "/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id"
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
