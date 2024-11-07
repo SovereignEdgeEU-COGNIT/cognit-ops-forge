@@ -1,0 +1,14 @@
+---
+repo_url: https://github.com/SovereignEdgeEU-COGNIT/edgecluster-frontend.git
+repo_dest: /opt/edgecluster-frontend
+
+conf_file: cognit-edge_cluster_frontend.conf
+auth_dir: /root/.one
+auth_file: one_auth
+api_port: 1339
+log_level: info
+log_file: /var/log/cognit_edge_cluster_frontend.log
+
+nginx_ssl_dir: /etc/nginx/ssl
+cert_crt: "{{ nginx_ssl_dir }}/certificate.crt"
+cert_key: "{{ nginx_ssl_dir }}/certificate.key"

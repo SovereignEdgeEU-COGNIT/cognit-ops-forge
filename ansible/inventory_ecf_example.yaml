@@ -1,0 +1,15 @@
+---
+all:
+  vars:
+    oned: https://cognit-lab.sovereignedge.eu/RPC2
+    oneflow: https://cognit-lab-oneflow.sovereignedge.eu/
+    one_pass: cognit
+edge_cluster_frontend:
+  hosts:
+    edge_cluster_frontend1:
+      ansible_host: ec2-18-117-252-146.us-east-2.compute.amazonaws.com
+      ansible_user: ubuntu
+      cluster_id: 0
+      domain_name: ec2-18-117-252-146.us-east-2.compute.amazonaws.com
+      cognit_frontend: https://cognit-lab-frontend.sovereignedge.eu/
+      one_user: cognit_admin

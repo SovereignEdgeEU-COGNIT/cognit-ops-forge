@@ -9,7 +9,6 @@
   ansible.builtin.package:
     name: python3-pip
     state: present
-    update-cache: true
 
 - name: Install pip dependencies
   ansible.builtin.pip:
@@ -21,6 +20,19 @@
     src: "{{ conf_file }}.j2"
     dest: "/etc/{{ conf_file }}"
     mode: "0644"
+
+- name: Create Edge Cluster auth dir
+  ansible.builtin.file:
+    path: "{{ auth_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Configure Edge Cluster Frontend auth
+  ansible.builtin.template:
+    src: "{{ auth_file }}.j2"
+    dest: "{{ auth_dir }}/{{ auth_file }}"
+    mode: "0600"
+
 
 - name: Get PID of process running on uvicorn port
   ansible.builtin.command: lsof -ti:{{ api_port }}
@@ -39,7 +51,7 @@
 
 - name: Start uvicorn
   ansible.builtin.shell: |
-    nohup python3 {{ repo_dest }}/src/main.py > /var/log/uvicorn.log 2>&1 &
+    nohup python3 {{ repo_dest }}/src/main.py > {{ log_file }} 2>&1 &
   register: uvicorn
   changed_when: uvicorn.rc == 0
   failed_when: uvicorn.rc != 0
@@ -47,4 +59,4 @@
 - name: Wait for uvicorn to start
   ansible.builtin.wait_for:
     port: "{{ api_port }}"
-    timeout: 5
+    timeout: 10
