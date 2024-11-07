@@ -1,5 +1,7 @@
 ---
 repo_url: https://github.com/SovereignEdgeEU-COGNIT/cognit-frontend.git
-repo_dest: /home/ubuntu/cognit-frontend
+repo_dest: /opt/cognit-frontend
 api_port: 1338
 conf_file: cognit-frontend.conf
+log_level: info
+log_file: /var/log/cognit_frontend.log

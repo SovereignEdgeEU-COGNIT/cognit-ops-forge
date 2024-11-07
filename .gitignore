@@ -35,6 +35,7 @@ inventory_kiwi_dev.yaml
 ansible/ansible.cfg
 ansible/inventory.yaml
 ansible/inventory_kiwi.yaml
+ansible/inventory_ecf.yaml
 
 # Ignore generated log
 opsforge.log

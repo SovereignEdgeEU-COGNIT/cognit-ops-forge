@@ -1,6 +1,6 @@
 ---
 repo_url: https://github.com/SovereignEdgeEU-COGNIT/provisioning-engine.git
-repo_dest: /home/ubuntu/provision-engine
+repo_dest: /opt/provision-engine
 ruby_dependencies:
   - ruby
   - ruby-dev

@@ -1,0 +1,4 @@
+- name: Setup Edge Cluster Frontend
+  hosts: "{{ edge_cluster_frontend_group | d('edge_cluster_frontend') }}"
+  roles:
+    - edge_cluster_frontend
