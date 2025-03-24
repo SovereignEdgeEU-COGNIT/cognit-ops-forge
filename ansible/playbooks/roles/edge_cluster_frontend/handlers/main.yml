@@ -3,3 +3,8 @@
   ansible.builtin.systemd:
     name: nginx
     state: restarted
+
+- name: Restart rabbitmq
+  ansible.builtin.systemd:
+    name: rabbitmq-server
+    state: restarted

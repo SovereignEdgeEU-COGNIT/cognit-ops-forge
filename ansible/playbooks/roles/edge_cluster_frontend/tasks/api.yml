@@ -1,5 +1,5 @@
 ---
-- name: Clone Cognit Frontend repo
+- name: Clone Cognit Edge Cluster Frontend repo
   ansible.builtin.git:
     repo: "{{ repo_url }}"
     dest: "{{ repo_dest }}"
@@ -14,6 +14,7 @@
   ansible.builtin.pip:
     requirements: "{{ repo_dest }}/requirements.txt"
     state: present
+    # break_system_packages: true # ansible 2.17 and ubuntu2404
 
 - name: Configure Edge Cluster Frontend
   ansible.builtin.template:

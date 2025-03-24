@@ -1,0 +1,17 @@
+---
+- name: Install broker (rabbitmq)
+  ansible.builtin.package:
+    name:
+      - rabbitmq-server
+    state: present
+
+- name: Configure rabbitmq
+  ansible.builtin.template:
+    src: rabbitmq.conf.j2
+    dest: /etc/rabbitmq/rabbitmq.conf
+    mode: '0644'
+  notify:
+    - Restart rabbitmq
+
+- name: Restart RabbitMQ immediately
+  ansible.builtin.meta: flush_handlers

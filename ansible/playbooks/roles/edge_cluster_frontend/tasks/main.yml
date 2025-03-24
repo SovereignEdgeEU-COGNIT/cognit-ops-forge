@@ -2,9 +2,14 @@
 - name: Refresh package manager cache
   ansible.builtin.package:
     update-cache: true
+  when: package_cache is true
+
+- name: Set up Edge Cluster Frontend Broker
+  ansible.builtin.include_tasks: broker.yml
 
 - name: Set up Edge Cluster Frontend API
   ansible.builtin.include_tasks: api.yml
 
 - name: Set up SSL for Edge Cluster Frontend API
   ansible.builtin.include_tasks: ssl.yml
+  when: ssl is true
