@@ -6,6 +6,9 @@ http {
     ssl_certificate {{ cert_crt }};
     ssl_certificate_key {{ cert_key }};
 
+    # increase if needed for long running sync functions
+    proxy_read_timeout {{ proxy_read_timeout }};
+
     server {
         listen {{ web_port}};
         listen [::]:{{ web_port}};

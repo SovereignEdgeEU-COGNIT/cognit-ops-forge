@@ -12,3 +12,4 @@ log_file: /var/log/cognit_edge_cluster_frontend.log
 nginx_ssl_dir: /etc/nginx/ssl
 cert_crt: "{{ nginx_ssl_dir }}/certificate.crt"
 cert_key: "{{ nginx_ssl_dir }}/certificate.key"
+proxy_read_timeout: 600
