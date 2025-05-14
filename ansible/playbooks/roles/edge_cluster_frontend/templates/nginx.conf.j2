@@ -22,6 +22,8 @@ http {
         listen {{ web_port }} ssl;
         server_name {{ domain_name }};
 
+        client_max_body_size 10M;
+
         # Look for Edge Cluster Frontend API
         location / {
             proxy_pass http://localhost:{{ api_port }}/;
