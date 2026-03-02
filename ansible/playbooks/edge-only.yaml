@@ -1,0 +1,3 @@
+---
+# Run only the edge-cluster playbook (used by ./opsforge deploy-edge)
+- ansible.builtin.import_playbook: edge-cluster.yaml

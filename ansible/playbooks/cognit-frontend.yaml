@@ -1,0 +1,317 @@
+---
+# Cognit frontend overlay: Cognit packages, marketplace, hooks and OneForm setup.
+
+- name: Install POC Cognit on frontend
+  hosts: frontend
+  gather_facts: true
+  vars:
+    cognit_packages:
+      - opennebula-cognit-frontend
+      - opennebula-cognit-optimizer
+      - opennebula-cognit-devices-estimated-load
+    cognit_venv_path: "/usr/share/one/cognit-venv"
+    cognit_requirements: "{{ playbook_dir }}/cognit_deb_requirements.txt"
+  tasks:
+    # --- Kill unattended-upgrades so it doesn't hold the dpkg lock ---
+
+    - name: Stop unattended-upgrades on frontend
+      ansible.builtin.shell:
+        cmd: |
+          systemctl stop unattended-upgrades 2>/dev/null
+          systemctl stop apt-daily.timer apt-daily-upgrade.timer 2>/dev/null
+          systemctl disable unattended-upgrades apt-daily.timer apt-daily-upgrade.timer 2>/dev/null
+          pkill -9 unattended-upgr 2>/dev/null
+          true
+      changed_when: false
+      failed_when: false
+
+    - name: Wait for dpkg lock to be released (up to 2 min)
+      ansible.builtin.shell:
+        cmd: fuser /var/lib/dpkg/lock-frontend 2>/dev/null
+      register: dpkg_lock
+      retries: 24
+      delay: 5
+      until: dpkg_lock.rc != 0
+      changed_when: false
+      failed_when: false
+
+    - name: Purge unattended-upgrades on frontend
+      ansible.builtin.apt:
+        name: unattended-upgrades
+        state: absent
+        purge: true
+      failed_when: false
+
+    # --- Python venv setup (before deb packages so services can start) ---
+
+    - name: Install git (required by ansible.builtin.git tasks)
+      ansible.builtin.apt:
+        name: [git]
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install uv
+      ansible.builtin.shell:
+        cmd: curl -LsSf https://astral.sh/uv/install.sh | sh
+        creates: /root/.local/bin/uv
+
+    - name: Create Python virtualenv with uv
+      ansible.builtin.shell:
+        cmd: /root/.local/bin/uv venv {{ cognit_venv_path }} --python 3.12
+        creates: "{{ cognit_venv_path }}/bin/python"
+
+    - name: Copy locked requirements to target
+      ansible.builtin.copy:
+        src: "{{ cognit_requirements }}"
+        dest: /tmp/cognit-requirements.lock
+        mode: "0644"
+
+    - name: Install locked requirements with uv
+      ansible.builtin.shell:
+        cmd: timeout 600 /root/.local/bin/uv pip install --python {{ cognit_venv_path }}/bin/python -r /tmp/cognit-requirements.lock
+
+    # --- Cognit apt packages ---
+
+    - name: Install POC Cognit packages
+      ansible.builtin.apt:
+        name: "{{ cognit_packages }}"
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Fix pyoneai __pycache__ ownership for onehost sync
+      ansible.builtin.shell:
+        cmd: chown -R oneadmin:oneadmin /var/lib/one/remotes/im/lib/python/pyoneai/
+      changed_when: false
+      failed_when: false
+
+    # --- Enable and start Cognit services ---
+
+    - name: Enable and restart Cognit services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: true
+        state: restarted
+        daemon_reload: true
+      loop:
+        - opennebula-cognit-frontend
+        - opennebula-cognit-optimizer
+        - opennebula-cognit-devices-estimated-load
+
+    # --- Replace default marketplaces with Cognit marketplace ---
+
+    - name: Get existing marketplaces
+      ansible.builtin.command:
+        cmd: onemarket list -l ID --no-header
+      register: existing_markets
+      changed_when: false
+      become: true
+      become_user: oneadmin
+
+    - name: Disable default marketplaces
+      ansible.builtin.command:
+        cmd: "onemarket disable {{ item }}"
+      loop: "{{ existing_markets.stdout_lines | map('trim') | list }}"
+      when: existing_markets.stdout_lines | length > 0
+      failed_when: false
+      become: true
+      become_user: oneadmin
+
+    - name: Delete default marketplaces
+      ansible.builtin.command:
+        cmd: "onemarket delete {{ item }}"
+      loop: "{{ existing_markets.stdout_lines | map('trim') | list }}"
+      when: existing_markets.stdout_lines | length > 0
+      become: true
+      become_user: oneadmin
+
+    - name: Copy Cognit marketplace template
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/cognit_marketplace.tmpl"
+        dest: /tmp/cognit_marketplace.tmpl
+        mode: "0644"
+
+    - name: Check if Cognit marketplace already exists
+      ansible.builtin.shell:
+        cmd: onemarket list --no-header | grep -q "Cognit Marketplace"
+      register: cognit_market_check
+      changed_when: false
+      failed_when: false
+      become: true
+      become_user: oneadmin
+
+    - name: Create Cognit marketplace
+      ansible.builtin.command:
+        cmd: onemarket create /tmp/cognit_marketplace.tmpl
+      when: cognit_market_check.rc != 0
+      become: true
+      become_user: oneadmin
+
+    # --- Install geocoder gem (needed by geo-carbon hook) ---
+
+    - name: Ensure OpenNebula gems directory exists
+      ansible.builtin.file:
+        path: /usr/share/one/gems
+        state: directory
+        mode: "0755"
+
+    - name: Install geocoder Ruby gem into OpenNebula gem path
+      ansible.builtin.command:
+        cmd: gem install geocoder -v 1.8.6 --install-dir /usr/share/one/gems --no-document
+      register: geocoder_install
+      failed_when: false
+      changed_when: geocoder_install.rc == 0
+
+    # --- Register the geo-carbon hook ---
+
+    - name: Create geo-carbon-hook (ignore if already exists)
+      ansible.builtin.command:
+        cmd: onehook create /usr/share/one/geo_carbon_hook.tmpl
+      become: true
+      become_user: oneadmin
+      register: hook_create
+      failed_when: false
+      changed_when: hook_create.rc == 0
+
+    # --- Fix: remove stale terraform that shadows the opennebula-form one ---
+
+    - name: Remove stale /usr/local/bin/terraform (opennebula-form ships /usr/bin/terraform)
+      ansible.builtin.file:
+        path: /usr/local/bin/terraform
+        state: absent
+
+    # --- Fix: patch KVM monitoring bug BEFORE provisioning ---
+    # info_each discards super return value, causing state.rb to crash
+    # with "undefined method 'each' for nil:NilClass"
+
+    - name: Check if kvm.rb already patched
+      ansible.builtin.shell:
+        cmd: grep -c 'result = super(do_process)' /var/lib/one/remotes/im/lib/kvm.rb
+      register: kvm_check
+      changed_when: false
+      failed_when: false
+
+    - name: Patch kvm.rb info_each to return super result instead of nil
+      ansible.builtin.shell:
+        cmd: |
+          python3 << 'PYEOF'
+          path = '/var/lib/one/remotes/im/lib/kvm.rb'
+          with open(path) as f:
+              lines = f.readlines()
+          patched = False
+          for i, line in enumerate(lines):
+              if 'def info_each(do_process)' in line and not patched:
+                  for j in range(i+1, min(i+5, len(lines))):
+                      stripped = lines[j].lstrip()
+                      if stripped.startswith('super(do_process)') and 'result' not in lines[j]:
+                          indent = lines[j][:len(lines[j]) - len(stripped)]
+                          lines[j] = indent + 'result = super(do_process)\n'
+                          for k in range(j+1, min(j+5, len(lines))):
+                              if 'vms_power' in lines[k]:
+                                  lines.insert(k+1, indent + 'result\n')
+                                  patched = True
+                                  break
+                          break
+          if patched:
+              with open(path, 'w') as f:
+                  f.writelines(lines)
+              print('PATCHED')
+          else:
+              print('ALREADY_PATCHED')
+          PYEOF
+      when: kvm_check.stdout | trim == "0"
+      register: kvm_patch
+      changed_when: "'PATCHED' == (kvm_patch.stdout | default('') | trim)"
+
+    # --- Fix: symlink Ansible binaries so OneForm can find them ---
+    # pip installs ansible-core into ~oneadmin/.local/bin/ but OneForm
+    # runs as oneadmin and doesn't have that on PATH.
+
+    - name: Symlink oneadmin Ansible binaries to /usr/local/bin
+      ansible.builtin.shell:
+        cmd: |
+          for f in /var/lib/one/.local/bin/ansible*; do
+            [ -x "$f" ] && ln -sf "$f" /usr/local/bin/
+          done
+      changed_when: false
+
+    - name: Verify ansible is in PATH for oneadmin
+      ansible.builtin.command:
+        cmd: which ansible
+      become: true
+      become_user: oneadmin
+      changed_when: false
+
+    # --- OneForm: start with Ansible now in PATH ---
+
+    - name: Enable and restart OneForm server
+      ansible.builtin.service:
+        name: opennebula-form
+        enabled: true
+        state: restarted
+
+    - name: Wait for OneForm API to be ready
+      ansible.builtin.uri:
+        url: http://127.0.0.1:13013
+        status_code: [200, 401]
+      register: oneform_health
+      retries: 10
+      delay: 3
+      until: oneform_health is not failed
+
+    # --- OneForm registry: add aws and scaleway as external drivers ---
+
+    - name: Ensure OneForm external drivers directory exists
+      ansible.builtin.file:
+        path: /var/lib/one/oneform/drivers
+        state: directory
+        owner: oneadmin
+        group: oneadmin
+        mode: "0755"
+
+    - name: Clone oneform-registry into OneForm drivers directory
+      ansible.builtin.git:
+        repo: https://github.com/OpenNebula/oneform-registry.git
+        dest: /var/lib/one/oneform/drivers/oneform-registry
+        version: master
+        update: true
+      become: true
+      become_user: oneadmin
+
+    - name: Trigger OneForm driver rescan
+      ansible.builtin.command:
+        cmd: oneform sync
+      become: true
+      become_user: oneadmin
+
+    - name: Verify OneForm drivers (list includes aws and scalway)
+      ansible.builtin.command:
+        cmd: oneform list
+      become: true
+      become_user: oneadmin
+      register: oneform_list
+      changed_when: false
+
+    - name: Assert aws and scalway drivers are available
+      ansible.builtin.assert:
+        that:
+          - "'aws' in oneform_list.stdout"
+          - "'scaleway' in oneform_list.stdout"
+        fail_msg: "oneform list did not show aws and scaleway drivers after oneform sync"
+
+    # --- Ensure OneForm is running at end of playbook ---
+
+    - name: Ensure OneForm server is running
+      ansible.builtin.service:
+        name: opennebula-form
+        enabled: true
+        state: started
+
+    - name: Wait for OneForm API
+      ansible.builtin.uri:
+        url: http://127.0.0.1:13013
+        status_code: [200, 401]
+      register: oneform_final
+      retries: 6
+      delay: 5
+      until: oneform_final is not failed
+      failed_when: false

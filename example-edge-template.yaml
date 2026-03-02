@@ -1,0 +1,13 @@
+# Example: edge cluster provisioning (control plane already deployed)
+# Use after ./opsforge deploy with an on-prem or AWS control plane
+---
+:infra:
+  :hosts:
+    :frontend: "192.0.2.10"
+:cognit:
+  :one_pass: "mypassword"
+  :flavour: "NatureFR"
+  :provider: "MyProvider"
+  :geolocation: "48.8566,2.3522"
+  :edge_host_ips:
+    - "192.0.2.20"

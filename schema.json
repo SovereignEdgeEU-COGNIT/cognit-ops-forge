@@ -14,12 +14,12 @@
               "properties": {
                 "ec2_instance_type": {
                   "type": "string",
-                  "description": "EC2 instance types used to deploy the COGNIT components",
-                  "default": "t2.medium"
+                  "description": "EC2 instance type for the frontend host",
+                  "default": "t3.large"
                 },
                 "volume_size": {
                   "type": "integer",
-                  "description": "EBS root volume size for the EC2 instances",
+                  "description": "EBS root volume size for the frontend EC2 instance (GiB)",
                   "default": 125
                 },
                 "region": {
@@ -29,11 +29,11 @@
                 },
                 "ssh_key": {
                   "type": "string",
-                  "description": "Name of the SSH in AWS key that will be used to connect to the EC2 instances"
+                  "description": "Name of the SSH key in AWS used to connect to the EC2 instance"
                 },
                 "ssh_key_path": {
                   "type": "string",
-                  "description": "private key path in the SSH client filesystem",
+                  "description": "Private key path on the opsforge runner",
                   "default": "~/.ssh/id_rsa"
                 }
               }
@@ -45,23 +45,11 @@
           "properties": {
             "hosts": {
               "type": "object",
-              "required": ["ingress", "cloud", "frontend", "ai_orchestrator"],
+              "required": ["frontend"],
               "properties": {
-                "ingress": {
-                  "type": "string",
-                  "description": "Hostname/IP where the COGNIT Ingress controller will be installed"
-                },
-                "cloud": {
-                  "type": "string",
-                  "description": "Hostname/IP where the COGNIT Cloud-Edge Manager will be installed"
-                },
                 "frontend": {
                   "type": "string",
-                  "description": "Hostname/IP where the COGNIT Frontend will be installed"
-                },
-                "ai_orchestrator": {
-                  "type": "string",
-                  "description": "Hostname/IP where the COGNIT AI Orchestrator will be installed"
+                  "description": "Hostname/IP of the control plane host (OpenNebula + COGNIT Frontend)"
                 }
               }
             }
@@ -71,91 +59,34 @@
     },
     "cognit": {
       "type": "object",
+      "required": ["one_pass"],
       "properties": {
-        "apps": {
-          "type": "object",
-          "properties": {
-            "base": {
-              "type": "string",
-              "description": "URL of the base Serverles Runtime appliance"
-            },
-            "Cybersec": {
-              "type": "string",
-              "description": "URL of the Cybersecurity use case Serverles Runtime appliance"
-            },
-            "Energy": {
-              "type": "string",
-              "description": "URL of the Energy use case Serverles Runtime appliance"
-            },
-            "Nature": {
-              "type": "string",
-              "description": "URL of the Energy use case Serverles Runtime appliance"
-            },
-            "SmartCity": {
-              "type": "string",
-              "description": "URL of the Smart City use case Serverles Runtime appliance"
-            }
-          },
-          "additionalProperties": false
-        },
-        "certificate": {
-          "type": "object",
-          "required": ["crt", "key"],
-          "properties": {
-            "crt": {
-              "type": "string",
-              "description": "Path of the certificate file in the opsforge runner"
-            },
-            "key": {
-              "type": "string",
-              "description": "Path of the certificate key file in the opsforge runner"
-            }
-          }
-        },
-        "frontend": {
-          "type": "object",
-          "properties": {
-            "version": {
-              "type": "string",
-              "description": "Git repository HEAD of the Cloud-Edge Manager extensions GitHub repository to use as version reference",
-              "default": "main"
-            }
-          }
-        },
-        "ai_orchestrator": {
-          "type": "object",
-          "properties": {
-            "version": {
-              "type": "string",
-              "description": "Git repository HEAD of the Cloud-Edge Manager extensions GitHub repository to use as version reference",
-              "default": "main"
-            }
-          }
-        },
-        "cloud": {
-          "type": "object",
-          "required": ["ee_token"],
-          "properties": {
-            "version": {
-              "type": "number",
-              "description": "Cloud-Edge Manager version to deploy",
-              "default": "6.8"
-            },
-            "ee_token": {
-              "type": "string",
-              "description": "Cloud-Edge Manger enterpise edition token"
-            }
-          }
-        }
-      }
-    },
-    "extensions": {
-      "type": "object",
-      "properties": {
-        "version": {
+        "one_pass": {
           "type": "string",
-          "description": "Git repository HEAD of the Cloud-Edge Manager extensions GitHub repository to use as version reference",
-          "default": "main"
+          "description": "oneadmin password for the Cloud-Edge Manager (required for deploy)"
+        },
+        "one_version": {
+          "type": "string",
+          "description": "OpenNebula version to deploy",
+          "default": "7.1"
+        },
+        "flavour": {
+          "type": "string",
+          "description": "Use case flavour for edge cluster (NatureFR, SmartCity, EnergyTorch, Energy, CyberSecurity); required for deploy-edge"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Provider name for cluster metadata; required for deploy-edge"
+        },
+        "geolocation": {
+          "type": "string",
+          "description": "Cluster geolocation (lat,lon) for discovery",
+          "default": "48.8566,2.3522"
+        },
+        "edge_host_ips": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "IP addresses of pre-existing edge hosts to add as KVM compute nodes; required for deploy-edge"
         }
       }
     }

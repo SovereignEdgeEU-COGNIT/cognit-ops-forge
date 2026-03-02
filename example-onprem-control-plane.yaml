@@ -1,0 +1,7 @@
+# Example: on-premises control plane only (replace frontend IP with your host)
+---
+:infra:
+  :hosts:
+    :frontend: "192.0.2.10"
+:cognit:
+  :one_pass: "mypassword"
