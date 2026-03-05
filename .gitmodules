@@ -1,3 +1,5 @@
 [submodule "ansible/one-deploy"]
 	path = ansible/one-deploy
+	# TODO: merge fork changes into OpenNebula/one-deploy, then switch URL to:
+	# url = https://github.com/OpenNebula/one-deploy.git
 	url = https://github.com/dmingolla/one-deploy.git
