@@ -108,7 +108,12 @@ def ansible(infra, opsforge_template, edge_only: false)
     puts edge_only ? 'Provisioning edge cluster' : 'Installing OpenNebula and COGNIT'
 
     Dir.chdir("#{__dir__}/ansible/one-deploy")
-    cmd_exec('make requirements')
+    begin
+      cmd_exec('make requirements')
+    rescue StandardError
+      # Fallback when Poetry is not available: install galaxy collections only
+      cmd_exec('ansible-galaxy collection install -p ansible_collections -r requirements.yml')
+    end
 
     cognit = opsforge_template[:cognit] || {}
     ansible_user = opsforge_template[:infra].key?(:aws) ? 'ubuntu' : 'root'
@@ -138,6 +143,11 @@ def ansible(infra, opsforge_template, edge_only: false)
         'node' => { 'hosts' => {} }
     }
 
+    if cognit[:one_internal_repo_url]
+        inventory['all']['vars']['one_internal_repo_url'] = cognit[:one_internal_repo_url].to_s
+        inventory['all']['vars']['one_internal_repo_component'] = (cognit[:one_internal_repo_component] || 'poc-cognit').to_s
+    end
+
     if cognit[:edge_host_ips] && cognit[:edge_host_ips].length > 0
         inventory['all']['vars']['edge_host_ips'] = cognit[:edge_host_ips].map(&:to_s)
         inventory['all']['vars']['flavour'] = cognit[:flavour].to_s if cognit[:flavour]
@@ -154,7 +164,8 @@ def ansible(infra, opsforge_template, edge_only: false)
         display_skipped_hosts=true
         retry_files_enabled=false
         any_errors_fatal=true
-        stdout_callback=yaml
+        stdout_callback=default
+        result_format=yaml
         timeout=30
         remote_user=#{ansible_user}
         [privilege_escalation]
@@ -445,7 +456,6 @@ end
 
 case ARGV[0]
 when 'deploy'
-    verify_requirements(require_terraform: true)
     raise 'Usage: ./opsforge deploy <template.yaml>' if ARGV[1].to_s.empty?
     opsforge_template = YAML.load_file(ARGV[1])
     opsforge_template = opsforge_template.transform_keys(&:to_sym)
@@ -457,6 +467,8 @@ when 'deploy'
 
     validate_template(opsforge_template)
     raise 'Template must include :cognit: :one_pass:' unless opsforge_template[:cognit] && opsforge_template[:cognit][:one_pass]
+
+    verify_requirements(require_terraform: opsforge_template[:infra].key?(:aws))
 
     if opsforge_template[:infra].key?(:aws)
         howlong { infra = terraform_aws(opsforge_template) }

@@ -18,7 +18,6 @@
 - name: Deploy edge cluster and OneFlow service ({{ flavour | default('UNDEFINED') }})
   hosts: frontend
   gather_facts: true
-  when: edge_host_ips is defined and edge_host_ips | length > 0
   vars:
     marketplace_datastore_id: 1
     # OneFlow dynamic network name in the service template (fixed)

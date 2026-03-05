@@ -28,4 +28,3 @@
 - ansible.builtin.import_playbook: opennebula.deploy.pre
 - ansible.builtin.import_playbook: opennebula.deploy.site
 - ansible.builtin.import_playbook: cognit-frontend.yaml
-- ansible.builtin.import_playbook: edge-cluster.yaml
