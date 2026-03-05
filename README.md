@@ -18,7 +18,9 @@ The COGNIT Stack is built using the following components:
 OpsForge automatically deploys and configures:
 
 - **OpenNebula Frontend** — Cloud-Edge Manager (oned, Sunstone, FireEdge, OneFlow)
-- **COGNIT Frontend** — API gateway for device clients
+- **COGNIT Frontend** — assigns clusters to devices based on device requirements
+- **COGNIT Optimizer** — decides workload placement across clusters and scales the number of VMs when needed
+- **Devices Load Estimator** — updates estimated load from per-service CPU usage, feeding the Optimizer
 - **Edge Cluster Frontend** — per-edge-site proxy and service orchestration (via `deploy-edge`)
 
 
