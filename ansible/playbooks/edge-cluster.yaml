@@ -160,6 +160,19 @@
 
         # --- Create provider + provision ---
 
+        - name: Ensure opennebula-form is running (serves oneprovider API on port 13013)
+          ansible.builtin.systemd:
+            name: opennebula-form
+            state: started
+            enabled: true
+          become: true
+
+        - name: Wait for provision server to be ready
+          ansible.builtin.wait_for:
+            port: 13013
+            host: localhost
+            timeout: 30
+
         - name: Check if OnPrem provider already exists
           ansible.builtin.shell:
             cmd: oneprovider list --no-header | grep -i onprem | awk '{print $1}'

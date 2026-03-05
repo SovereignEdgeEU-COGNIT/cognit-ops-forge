@@ -7,6 +7,19 @@
       ansible.builtin.hostname:
         name: "{{ inventory_hostname }}"
 
+    - name: Stop unattended-upgrades (holds dpkg lock on fresh VMs)
+      ansible.builtin.systemd:
+        name: unattended-upgrades
+        state: stopped
+      failed_when: false
+
+    - name: Purge unattended-upgrades
+      ansible.builtin.apt:
+        name: unattended-upgrades
+        state: absent
+        purge: true
+      failed_when: false
+
     - name: Add internal OpenNebula APT repo
       ansible.builtin.copy:
         dest: /etc/apt/sources.list.d/opennebula.list
