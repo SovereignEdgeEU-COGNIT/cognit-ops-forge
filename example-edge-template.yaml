@@ -1,13 +1,14 @@
-# Example: edge cluster provisioning (control plane already deployed)
-# Use after ./opsforge deploy with an on-prem or AWS control plane
+# Example: edge cluster deployment (frontend must already be deployed)
 ---
 :infra:
   :hosts:
     :frontend: "192.0.2.10"
 :cognit:
   :one_pass: "mypassword"
+  :one_internal_repo_url: "http://5.2.88.196/repo/"
+  :one_internal_repo_component: "poc-cognit"
   :flavour: "NatureFR"
-  :provider: "MyProvider"
+  :provider: "OnPrem"
   :geolocation: "48.8566,2.3522"
   :edge_host_ips:
     - "192.0.2.20"

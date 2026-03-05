@@ -248,11 +248,28 @@
 
         # --- Post-provisioning: sync patched remotes to new hosts ---
 
-        - name: Sync patched monitoring remotes to all hosts
+        - name: Fix remotes ownership (pyoneai __pycache__ may be root-owned)
+          ansible.builtin.file:
+            path: /var/lib/one/remotes
+            owner: oneadmin
+            group: oneadmin
+            recurse: true
+
+        - name: Sync remotes to edge hosts via rsync (onehost sync fallback)
+          ansible.builtin.shell:
+            cmd: >-
+              rsync -az --delete /var/lib/one/remotes/ root@{{ item }}:/var/tmp/one/
+          become: true
+          become_user: oneadmin
+          loop: "{{ edge_host_ips }}"
+
+        - name: Try onehost sync (non-fatal)
           ansible.builtin.command:
             cmd: onehost sync --force
           become: true
           become_user: oneadmin
+          failed_when: false
+          changed_when: false
 
         - name: Force monitoring update on all hosts
           ansible.builtin.shell:

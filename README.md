@@ -156,7 +156,6 @@ This requires no Terraform — it runs only Ansible against the existing fronten
 
 **Available flavours:** `NatureFR`, `SmartCity`, `EnergyTorch`, `Energy`, `CyberSecurity`
 
-> [!IMPORTANT]
 > Edge hosts must be reachable by SSH from the **frontend host**. The `deploy-edge` command connects to the frontend and delegates all edge-host operations from there.
 
 ### Template reference

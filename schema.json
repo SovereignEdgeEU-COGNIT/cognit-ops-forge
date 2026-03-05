@@ -70,6 +70,15 @@
           "description": "OpenNebula version to deploy",
           "default": "7.1"
         },
+        "one_internal_repo_url": {
+          "type": "string",
+          "description": "Internal/private APT repository URL for OpenNebula packages (e.g. http://5.2.88.196/repo/)"
+        },
+        "one_internal_repo_component": {
+          "type": "string",
+          "description": "APT component within the internal repo (e.g. poc-cognit)",
+          "default": "poc-cognit"
+        },
         "flavour": {
           "type": "string",
           "description": "Use case flavour for edge cluster (NatureFR, SmartCity, EnergyTorch, Energy, CyberSecurity); required for deploy-edge"
