@@ -94,8 +94,6 @@ This installs OpenNebula + COGNIT Frontend on a single host. The template must p
     :frontend: "192.0.2.10"        # IP or hostname, root SSH access required
 :cognit:
   :one_pass: "mypassword"          # oneadmin password
-  :one_internal_repo_url: "http://5.2.88.196/repo/"   # optional: internal APT repo
-  :one_internal_repo_component: "poc-cognit"           # optional: APT component
 ```
 
 **AWS template example:**
@@ -145,8 +143,6 @@ This requires no Terraform — it runs only Ansible against the existing fronten
     :frontend: "192.0.2.10"        # existing frontend (from Step 1)
 :cognit:
   :one_pass: "mypassword"
-  :one_internal_repo_url: "http://5.2.88.196/repo/"
-  :one_internal_repo_component: "poc-cognit"
   :flavour: "NatureFR"             # use-case flavour (see below)
   :provider: "OnPrem"              # provider name for cluster metadata
   :geolocation: "48.8566,2.3522"  # optional: lat,lon
@@ -168,8 +164,6 @@ All available fields are described in [`schema.json`](./schema.json). Key fields
 | `:infra: :aws:` | `deploy` (AWS) | AWS configuration block |
 | `:cognit: :one_pass:` | both | oneadmin password |
 | `:cognit: :one_version:` | both | OpenNebula version (default: `7.1`) |
-| `:cognit: :one_internal_repo_url:` | optional | Internal APT repo URL |
-| `:cognit: :one_internal_repo_component:` | optional | APT component (default: `poc-cognit`) |
 | `:cognit: :edge_host_ips:` | `deploy-edge` | List of edge host IPs |
 | `:cognit: :flavour:` | `deploy-edge` | Use-case flavour name |
 | `:cognit: :provider:` | `deploy-edge` | Provider name for cluster metadata |

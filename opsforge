@@ -143,10 +143,9 @@ def ansible(infra, opsforge_template, edge_only: false)
         'node' => { 'hosts' => {} }
     }
 
-    if cognit[:one_internal_repo_url]
-        inventory['all']['vars']['one_internal_repo_url'] = cognit[:one_internal_repo_url].to_s
-        inventory['all']['vars']['one_internal_repo_component'] = (cognit[:one_internal_repo_component] || 'poc-cognit').to_s
-    end
+    # Add internal OpenNebula APT repo
+    inventory['all']['vars']['one_internal_repo_url'] = 'http://5.2.88.196/repo/'
+    inventory['all']['vars']['one_internal_repo_component'] = 'poc-cognit'
 
     if cognit[:edge_host_ips] && cognit[:edge_host_ips].length > 0
         inventory['all']['vars']['edge_host_ips'] = cognit[:edge_host_ips].map(&:to_s)
