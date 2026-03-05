@@ -1,0 +1,14 @@
+# OpsForge edge-cluster template
+# Usage: ./opsforge deploy-edge template-edge.yaml
+# The control plane must already be deployed (see template-frontend.yaml)
+---
+:infra:
+  :hosts:
+    :frontend: "172.20.0.4"       # Must match the frontend IP used in template-frontend.yaml
+:cognit:
+  :one_pass: "cognit-onepass"     # Must match the password used in template-frontend.yaml
+  :flavour: "NatureFR"            # Use-case flavour: NatureFR, SmartCity, EnergyTorch, Energy, CyberSecurity
+  :provider: "OnPrem"             # Provider name for cluster metadata
+  :geolocation: "48.8566,2.3522"  # Cluster geolocation as "latitude,longitude"
+  :edge_host_ips:                 # List of edge host IPs (root SSH from frontend required)
+    - "172.20.0.78"

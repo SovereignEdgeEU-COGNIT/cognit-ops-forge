@@ -1,9 +1,0 @@
-# Example: on-premises control plane only (replace frontend IP with your host)
----
-:infra:
-  :hosts:
-    :frontend: "192.0.2.10"
-:cognit:
-  :one_pass: "mypassword"
-  :one_internal_repo_url: "http://5.2.88.196/repo/"
-  :one_internal_repo_component: "poc-cognit"
