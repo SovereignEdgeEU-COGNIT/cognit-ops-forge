@@ -41,6 +41,20 @@ There is no Terraform required for on-premises deployments.
 - Root SSH access (key-based, no password) to all target hosts from the machine running OpsForge
 - If using AWS: [Terraform](https://developer.hashicorp.com/terraform/install) ≥ 1.5 and [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
+### Tested on-prem setup
+
+| Role | OS | Resources |
+|------|----|-----------|
+| Frontend | Ubuntu 24.04 | 4 GB RAM, 2 vCPUs, 20 GB disk |
+| Edge host (KVM node) | Ubuntu 24.04 | 4 GB RAM, 2 vCPUs, 20 GB disk |
+
+Additional requirements:
+
+- Root SSH (key-based) from your laptop to the frontend, and from the frontend to each edge host
+- **`host-passthrough` CPU model** on edge host VMs — without it the VMX flag is hidden from the guest and nested KVM fails (`/dev/kvm` missing)
+- All VMs must reach the internal COGNIT APT repository
+
+
 
 ### Internals: what happens under the hood
 
