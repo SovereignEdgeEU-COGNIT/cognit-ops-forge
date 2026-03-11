@@ -1,7 +1,0 @@
----
-- name: Refresh package manager cache
-  ansible.builtin.package:
-    update-cache: true
-
-- name: Set up COGNIT Frontend API
-  ansible.builtin.include_tasks: api.yml

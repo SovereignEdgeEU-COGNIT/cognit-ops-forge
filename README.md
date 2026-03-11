@@ -1,6 +1,6 @@
 # COGNIT OpsForge
 
-OpsForge let's you deploy the COGNIT Stack in a target infrastructure, turning it into a Cognitive Serverless Framework for the Cloud-Edge Continuum.
+OpsForge deploys the COGNIT Stack on a target infrastructure, turning it into a Cognitive Serverless Framework for the Cloud-Edge Continuum.
 
 ![Alt text](images/arch.png)
 
@@ -9,267 +9,206 @@ The COGNIT Stack is built using the following components:
 | Name                       | Documentation                                                                                                 | Testing                                                                                                        | Installation                                                                                                               |
 |----------------------------|---------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|
 | Device Client (Python)     | [Wiki documentation](https://github.com/SovereignEdgeEU-COGNIT/device-runtime-py/wiki)                        | [Test folder](https://github.com/SovereignEdgeEU-COGNIT/device-runtime-py/tree/main/cognit/test)               | [README](https://github.com/SovereignEdgeEU-COGNIT/device-runtime-py/blob/main/README.md)                                  |
-| COGNIT frontend            | [User guide](https://github.com/SovereignEdgeEU-COGNIT/cognit-frontend#use)                                   | [Test folder](https://github.com/SovereignEdgeEU-COGNIT/cognit-frontend#use)                                   | [Install guide](https://github.com/SovereignEdgeEU-COGNIT/cognit-frontend#install)                                         |
-| EdgeCluster frontend       | [User guide](https://github.com/SovereignEdgeEU-COGNIT/edgecluster-frontend#use)                              | [Test folder](https://github.com/SovereignEdgeEU-COGNIT/edgecluster-frontend/tree/main/tests)                  | [Install guide](https://github.com/SovereignEdgeEU-COGNIT/edgecluster-frontend#install)                                    |
+| COGNIT Frontend            | [User guide](https://github.com/SovereignEdgeEU-COGNIT/cognit-frontend#use)                                   | [Test folder](https://github.com/SovereignEdgeEU-COGNIT/cognit-frontend#use)                                   | [Install guide](https://github.com/SovereignEdgeEU-COGNIT/cognit-frontend#install)                                         |
+| EdgeCluster Frontend       | [User guide](https://github.com/SovereignEdgeEU-COGNIT/edgecluster-frontend#use)                              | [Test folder](https://github.com/SovereignEdgeEU-COGNIT/edgecluster-frontend/tree/main/tests)                  | [Install guide](https://github.com/SovereignEdgeEU-COGNIT/edgecluster-frontend#install)                                    |
 | Device Client (C)          | N/A                                                                                                           | [Test folder](https://github.com/SovereignEdgeEU-COGNIT/device-runtime-c/tree/master/cognit/test)              | [README](https://github.com/SovereignEdgeEU-COGNIT/device-runtime-c/blob/master/README.md)                                 |
-| OpenNebula                 | [Official](https://docs.opennebula.io/)                                                                       | [Q&A](https://github.com/OpenNebula/one/wiki/Quality-Assurance)                                                | [Install guide](https://docs.opennebula.io/6.8/installation_and_configuration/frontend_installation/index.html)            |
+| OpenNebula                 | [Official](https://docs.opennebula.io/)                                                                       | [Q&A](https://github.com/OpenNebula/one/wiki/Quality-Assurance)                                                | [Install guide](https://docs.opennebula.io/7.0/installation_and_configuration/frontend_installation/index.html)            |
 | Serverless Runtime         | [Wiki documentation](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime/wiki)                       | [Test folder](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime/tree/main/app/test)                 | [README](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime/blob/main/README.md)                                 |
-| AI Orchestrator            | [User guide](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator/blob/main/README.md)                   | [Testing doc](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator/blob/main/README.md#Testing)           | [Install guide](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator/blob/main/README.md)                             |
 
-OpsForge will automatically deploy and configure the following components on the target infrastructure:
+OpsForge automatically deploys and configures:
 
-- [OpenNebula Frontend node](https://docs.opennebula.io/STS/installation_and_configuration/frontend_installation/overview.html). All needed resources, like the Serverless Runtime templates, are created.
-- [COGNIT Frontend](https://github.com/SovereignEdgeEU-COGNIT/cognit-frontend)
-- [AI Orchestrator](https://github.com/SovereignEdgeEU-COGNIT/ai-orchestrator)
-- [Serverless Runtime](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime) appliance
-
-Afterwards you will need to manually setup
-
-- [Compute nodes](https://docs.opennebula.io/6.8/open_cluster_deployment/kvm_node/overview.html) and [networking](https://docs.opennebula.io/6.8/open_cluster_deployment/networking_setup/index.html), either manually or using the [public cloud providers](https://docs.opennebula.io/6.8/provision_clusters/providers/overview.html).
-
-Also you'll need a device client to make use of the infrastructure from your application
-
-- [Device Client Python](https://github.com/SovereignEdgeEU-COGNIT/device-runtime-py)
-- [Device Client C](https://github.com/SovereignEdgeEU-COGNIT/device-runtime-c)
+- **OpenNebula Frontend** — Cloud-Edge Manager (oned, Sunstone, FireEdge, OneFlow)
+- **COGNIT Frontend** — assigns clusters to devices based on device requirements
+- **COGNIT Optimizer** — decides workload placement across clusters and scales the number of VMs when needed
+- **Devices Load Estimator** — updates estimated load from per-service CPU usage, feeding the Optimizer
+- **Edge Cluster Frontend** — per-edge-site proxy and service orchestration (via `deploy-edge`)
 
 
 ## How to use
 
-OpsForge is a ruby CLI application that runs in your local machine. It will:
+OpsForge is a Ruby CLI that runs on your local machine. It:
 
-- setup AWS infrastructure using terraform if required
-- install and configure OpenNebula and the COGNIT services using ansible
-- populate the frontend with content required by the COGNIT use cases using the opennebula terraform provider
+1. Installs OpenNebula and the COGNIT Frontend on a target host using [one-deploy](https://github.com/OpenNebula/one-deploy) + COGNIT Ansible playbooks
+2. Optionally provisions edge cluster nodes and deploys the EdgeCluster Frontend via OneFlow
 
-As such, there are some requirements that need to be met in order to run the program.
+There is no Terraform required for on-premises deployments.
 
-- [ruby](https://www.ruby-lang.org/en/documentation/installation/) 3.2.2 and the gem [json-schema](https://rubygems.org/gems/json-schema) 4.1.1
-- [terraform](https://developer.hashicorp.com/terraform/install?product_intent=terraform) 1.5.7
-- [ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) 2.17.5 and the
-  - [one-deploy](https://github.com/OpenNebula/one-deploy/releases/tag/release-1.0.0) is a required git submodule
-- If using AWS
-  - [awscli](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) 2.15.30
-  - a valid [ssh key](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html) to connect to AWS EC2 instances
+### Requirements
 
-> [!IMPORTANT]
-> The dependency versions shown are guaranteed to work, older or recent versions might work as well, but it is not guaranteed.
+- [Ruby](https://www.ruby-lang.org/en/documentation/installation/) ≥ 3.0 and the gem [`json-schema`](https://rubygems.org/gems/json-schema)
+- [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) ≥ 2.14
+- The `one-deploy` git submodule initialized: `git submodule update --init ansible/one-deploy`
+- Root SSH access (key-based, no password) to all target hosts from the machine running OpsForge
+- If using AWS: [Terraform](https://developer.hashicorp.com/terraform/install) ≥ 1.5 and [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
-### Deploy
+### Tested on-prem setup
 
-There are two kinds of target infrastructure that are valid for OpsForge, you can deploy the COGNIT Stack on AWS or on a private datacenter, provided SSH access to the resources.
+| Role | OS | Resources |
+|------|----|-----------|
+| Frontend | Ubuntu 24.04 | 4 GB RAM, 2 vCPUs, 20 GB disk |
+| Edge host (KVM node) | Ubuntu 24.04 | 4 GB RAM, 2 vCPUs, 20 GB disk |
 
-To run opsforge, you need to clone this repository and run `./opsforge deploy <opsforge_template>`
+Additional requirements:
 
-To check all of the options available for the opsforge template, please refer to [the template schema](./schema.json).
+- Root SSH (key-based) from your laptop to the frontend, and from the frontend to each edge host
+- **`host-passthrough` CPU model** on edge host VMs — without it the VMX flag is hidden from the guest and nested KVM fails (`/dev/kvm` missing)
+- All VMs must reach the internal COGNIT APT repository
 
-The deployment will be conducted as follows
 
+
+### Internals: what happens under the hood
+
+When you run `./opsforge deploy` or `./opsforge deploy-edge`, OpsForge:
+
+1. Validates your template against `schema.json`
+2. Generates `ansible/inventory.yaml` and `ansible/ansible.cfg` from the template values
+3. Runs `ansible-playbook` from the `ansible/` directory using the following playbook chain:
+
+**`deploy` (control plane):**
 ```
-    +---------------+
-    |Public Internet|
-    +---------------+
-            |
-            |
-            |
-            |
-    +-------v-----------+ +----------------+ +--------------+-------------+
-    | Ingress Controller| |  Cloud-Edge    | | COGNIT       | Ai          |
-    | public ipv4       | |    Manager     | | Frontend     | Orchestrator|
-    | 10.0.1.x          | |   10.0.1.x     | | 10.0.1.x     | 10.0.1.x    |
-    +-------------------+ +----------------+ +--------------+-------------+
-             |                 |                  |              |
-             +-----------------+------------------+--------------+
-                                10.0.1.0/24
-```
-
-The Ingress controller is a special host which hides the COGNIT components behind a web server, providing API redirection for the Cloud-Edge manager web interfaces and the COGNIT Frontend with SSL encryption. It also acts as a management entry point, working as an SSH jump host/bastion. Finally, it also acts as a router for the private subnet hosting the COGNIT components.
-When deploying with AWS, these conditions will be automatically met. When deploying on-premises/with managed hosts, these conditions must be previously present.
-
-SSL certificates can be passed in the template with
-
-```yaml
-:cognit:
-  :certificate:
-    :crt: '~/certificate.crt' # a path to upload
-    :key: '~/certificate.key' # a path to upload
+ansible/playbooks/cognit.yaml
+  ├── Bootstrap: write internal APT repo (if one_internal_repo_url is set), apt update
+  ├── opennebula.deploy.pre   (one-deploy: prechecks)
+  ├── opennebula.deploy.site  (one-deploy: installs OpenNebula packages + services)
+  └── cognit-frontend.yaml    (installs COGNIT Frontend service)
 ```
 
-if not, they will be generated automatically and placed at `~/.cognit_ssl_certs`
-
-
-#### AWS
-
-![Alt text](images/aws.png)
-
-The deployment will create it's own VPC, Internet Gateway, subnets and Security Groups with the proper network configuration for the EC2 instances to communicate with each other and the internet. It can be done in any region as long as the instance type requested is available in it.
-
-Example
-
-```yaml
-:infra:
-  :aws:
-    :region: "us-east-1"
-    :ssh_key: <your_aws_named_ssh_key>
-:cognit:
-  :cloud:
-    :ee_token: <your_ee_token>
+**`deploy-edge` (edge cluster):**
+```
+ansible/playbooks/edge-only.yaml
+  └── edge-cluster.yaml
+        ├── Distribute SSH keys to edge hosts
+        ├── Pre-configure edge hosts (repo, packages)
+        ├── Create OnPrem provider + oneprovision cluster
+        ├── Wait for provision to reach RUNNING/DONE
+        ├── Sync ONE remotes to edge hosts
+        ├── Export marketplace app for the flavour (e.g. NatureFR)
+        ├── Wait for images to be READY
+        ├── Instantiate OneFlow service
+        ├── Configure nginx ECF proxy on edge host
+        └── Update cluster template (EDGE_CLUSTER_FRONTEND, FLAVOURS, PROVIDER, GEOLOCATION)
 ```
 
-When finished, you should receive information about how to connect to each instance. For example
+The `one-deploy` submodule is used as an Ansible collection (`opennebula.deploy`). Its `collections_path` is set to `ansible/one-deploy/ansible_collections/` in the generated `ansible.cfg`.
 
-```
-Frontend ready for Cognit
-Took 63.20396 seconds
 
-Infrastructure
-{
-  "cloud": "10.0.1.72",
-  "frontend": "10.0.1.236",
-  "ai_orchestrator": "10.0.1.45",
-  "ingress": "ec2-3-72-10-111.eu-central-1.compute.amazonaws.com"
-}
+## Deploy
 
-Access
-- Cloud-Edge Manager credentials: oneadmin:uCw1NhdNyJ9g7OAd
-- COGNIT Frontend: https://ec2-3-72-10-111.eu-central-1.compute.amazonaws.com/frontend
-- Stable Web UI:    https://ec2-3-72-10-111.eu-central-1.compute.amazonaws.com/sunstone
-- Next Gen Web UI:  https://ec2-3-72-10-111.eu-central-1.compute.amazonaws.com/fireedge
-- SSH: Connect to the host "ec2-3-72-10-111.eu-central-1.compute.amazonaws.com" with the "ubuntu" user, using the provided ssh key. You can access the rest of the cluster using this host as an SSH jump host.
-- SSL: Certificate files at /Users/dann1/.cognit_ssl_certs
+### Step 1 — Deploy the control plane
 
-Take a look at AWS cluster provisioning in order to setup your KVM cluster
-https://docs.opennebula.org/stable/provision_clusters/providers/aws_provider.html#aws-provider
-After that, take a look at the Energy Consumption extension
-https://github.com/SovereignEdgeEU-COGNIT/opennebula-extensions?tab=readme-ov-file#scaphandre-extension
-
-Logs available at ./opsforge.log'
+```bash
+./opsforge deploy <template.yaml>
 ```
 
-#### On Premises (Private Datacenter)
+This installs OpenNebula + COGNIT Frontend on a single host. The template must provide the frontend host and the oneadmin password.
 
-![Alt text](images/onprem.png)
-
-When deploying on specific hosts, the `:aws` key must not exist in the template, instead, specify each host hostname under the `:hosts` key. It is **required** to have root ssh access to said hosts.
-
-Example
+**On-premises template example:**
 
 ```yaml
 :infra:
   :hosts:
-    :ingress: 172.20.0.1
-    :cloud: 172.20.0.4
-    :frontend: 172.20.0.9
-    :ai_orchestrator: 172.20.17
+    :frontend: "192.0.2.10"        # IP or hostname, root SSH access required
 :cognit:
-  :app:
-    :base: http://app_server.cognit/base_app # Replace with publicly available app
-  :certificate:
-    :crt: '~/certificate.crt'
-    :key: '~/certificate.key'
-  :frontend:
-    :version: release-cognit-2.0
-  :ai_orchestrator:
-    :version: release-cognit-1.0
-  :cloud:
-    :version: 6.8
-    :ee_token: <enterprise_edition token for Cloud Edge Manager>
-    :extensions:
-      :version: main
+  :one_pass: "mypassword"          # oneadmin password
 ```
 
-> [!IMPORTANT]
-> The automatic deployment has been designed for Ubuntu 2204 hosts. It might not work if these hosts have different OS.
+**AWS template example:**
 
-
-## Build SR appliance
-
-A separate workflow exists to build the SR appliance. Underneath it uses [kiwi](https://osinside.github.io/kiwi/index.html) to perform the boostrap process.
-
- In order to trigger the build process, run
-
-```
-./opsforge build_sr <host>
+```yaml
+:infra:
+  :aws:
+    :region: "eu-central-1"
+    :ssh_key: "my-aws-key"
+:cognit:
+  :one_pass: "mypassword"
 ```
 
-Replace host with the hostname/IP address of the machine that will build the SR appliance.
-
-> [!WARNING]
-> This machine needs to be a SUSE host and should have enough space available to bootrstrap a new image, about 10 GB should be enough.
-
-It will take a while since it needs to boostrap an entire operating system. The result will be a qcow2 image containing an OpenSUSE Guest OS ready to run in OpenNebula with the [Serverless Runtime software](https://github.com/SovereignEdgeEU-COGNIT/serverless-runtime).
-
-Example
+When the deployment completes, OpsForge prints the access URLs:
 
 ```
+================================================================================
+
+Infrastructure
+{"frontend": "192.0.2.10"}
+
+Access
+- Cloud-Edge Manager: oneadmin / mypassword
+- Sunstone:    http://192.0.2.10:9869
+- FireEdge:    http://192.0.2.10:2616
+- COGNIT Frontend: http://192.0.2.10:1338
+- SSH: Connect to the frontend "192.0.2.10" as root.
+
+Logs available at ./opsforge.log
+```
+
+### Step 2 — Deploy edge clusters
+
+Once the control plane is up, provision one or more edge clusters with:
+
+```bash
+./opsforge deploy-edge <edge_template.yaml>
+```
+
+This requires no Terraform — it runs only Ansible against the existing frontend. The template must point to the already-deployed frontend and provide at least one edge host IP.
+
+**Edge template example:**
+
+```yaml
+:infra:
+  :hosts:
+    :frontend: "192.0.2.10"        # existing frontend (from Step 1)
+:cognit:
+  :one_pass: "mypassword"
+  :flavour: "NatureFR"             # use-case flavour (see below)
+  :provider: "OnPrem"              # provider name for cluster metadata
+  :geolocation: "48.8566,2.3522"  # optional: lat,lon
+  :edge_host_ips:
+    - "192.0.2.20"                 # one or more edge hosts, root SSH access required
+```
+
+**Available flavours:** `NatureFR`, `SmartCity`, `EnergyTorch`, `Energy`, `CyberSecurity`
+
+> Edge hosts must be reachable by SSH from the **frontend host**. The `deploy-edge` command connects to the frontend and delegates all edge-host operations from there.
+
+### Template reference
+
+All available fields are described in [`schema.json`](./schema.json). Key fields:
+
+| Field | Required for | Description |
+|---|---|---|
+| `:infra: :hosts: :frontend:` | `deploy` (on-prem), `deploy-edge` | Frontend host IP/hostname |
+| `:infra: :aws:` | `deploy` (AWS) | AWS configuration block |
+| `:cognit: :one_pass:` | both | oneadmin password |
+| `:cognit: :one_version:` | both | OpenNebula version (default: `7.1`) |
+| `:cognit: :edge_host_ips:` | `deploy-edge` | List of edge host IPs |
+| `:cognit: :flavour:` | `deploy-edge` | Use-case flavour name |
+| `:cognit: :provider:` | `deploy-edge` | Provider name for cluster metadata |
+| `:cognit: :geolocation:` | `deploy-edge` | Cluster geolocation `"lat,lon"` |
+
+
+## Build SR Appliance
+
+A separate workflow builds the Serverless Runtime appliance using [kiwi](https://osinside.github.io/kiwi/index.html):
+
+```bash
+./opsforge build_sr <host> [sr_version] [jumphost] [flavour]
+```
+
+The target host must be an OpenSUSE machine with ~10 GB of free space. The result is a qcow2 image at `/root/kiwi-image/output/cognit-sr.x86_64-1.0.0.qcow2` on the build host.
+
+```bash
 ./opsforge build_sr 172.20.0.5
-
-PLAY [Setup kiwi builder] ******************************************************
-
-TASK [Gathering Facts] *********************************************************
-[WARNING]: Platform linux on host kiwi1 is using the discovered Python
-interpreter at /usr/bin/python3.6, but future installation of another Python
-interpreter could change the meaning of that path. See
-https://docs.ansible.com/ansible-
-core/2.16/reference_appendices/interpreter_discovery.html for more information.
-ok: [kiwi1]
-
-TASK [kiwi : Verify openSUSE distribution] *************************************
-skipping: [kiwi1]
-
-TASK [kiwi : Install required packages] ****************************************
-ok: [kiwi1]
-
-TASK [kiwi : Copy kiwi image description files] ********************************
-ok: [kiwi1]
-
-TASK [kiwi : Check if output directory exists and is not empty] ****************
-ok: [kiwi1]
-
-TASK [kiwi : Clean up output directory] ****************************************
-changed: [kiwi1]
-
-TASK [kiwi : Create empty output directory] ************************************
-changed: [kiwi1]
-
-TASK [kiwi : Build kiwi image] *************************************************
-changed: [kiwi1]
-
-TASK [kiwi : Convert raw image to qcow2] ***************************************
-changed: [kiwi1]
-
-PLAY RECAP *********************************************************************
-kiwi1                      : ok=8    changed=4    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
-
-The appliance was generated at 172.20.0.5:/root/kiwi-image/output/cognit-sr.x86_64-1.0.0.qcow2
-
-## If we check on the host we find
-
-ls -l /root/kiwi-image/output/
-total 3783344
-drwxr-xr-x 3 root root         46 May 18 00:33 build
--rw-r--r-- 1 root root   16097710 May 18 00:41 cognit-sr.x86_64-1.0.0.changes
--rw-r--r-- 1 root root  625147904 May 18 00:54 cognit-sr.x86_64-1.0.0.install.iso
--rw-r--r-- 1 root root      64306 May 18 00:41 cognit-sr.x86_64-1.0.0.packages
--rw-r--r-- 1 root root 1597308928 May 18 00:54 cognit-sr.x86_64-1.0.0.qcow2
--rw-r--r-- 1 root root 2105540608 May 18 00:41 cognit-sr.x86_64-1.0.0.raw
--rw-r--r-- 1 root root       1577 May 18 00:41 cognit-sr.x86_64-1.0.0.verified
--rw-r--r-- 1 root root      10333 May 18 00:54 kiwi.result
--rw-r--r-- 1 root root        960 May 18 00:54 kiwi.result.json
-
+# ...
+# The appliance was generated at 172.20.0.5:/root/kiwi-image/output/cognit-sr.x86_64-1.0.0.qcow2
 ```
 
 
-##  Terminate
+## Terminate
 
-Once you no longer need the COGNIT deployment, you can easily delete the provisioned resources by issuing `./opsforge clean`.
-
-For example
+To destroy AWS infrastructure provisioned by OpsForge:
 
 ```bash
 ./opsforge clean
-Destroy complete! Resources: 14 destroyed.
-
-COGNIT deployment succesfully destroyed
 ```
 
-
+This runs `terraform destroy` on the AWS stack and removes generated config files. On-premises deployments must be cleaned up manually.

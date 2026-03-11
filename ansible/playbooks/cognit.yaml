@@ -1,34 +1,43 @@
 ---
-- name: Setup ingress node
-  hosts: "{{ ingress_group | d('ingress') }}"
-  roles:
-    - reverse_proxy
-    - nat_gateway
-
-- name: Apply routing to all relevant hosts
-  hosts:
-    - "{{ frontend_group | d('frontend') }}"
-    - "{{ cognit_frontend_group | d('cognit_frontend') }}"
-    - "{{ ai_group | d('ai') }}"
-  roles:
-    - route
-
-- name: Install OpenNebula
-  ansible.builtin.import_playbook: opennebula.deploy.main
-
-- name: Setup COGNIT Cloud-Edge Manager
-  hosts: "{{ frontend_group | d('frontend') }}"
-  roles:
-    - opennebula-extensions
-    - one_frontend
-
-- name: Setup COGNIT Frontend
-  hosts: "{{ cognit_frontend_group | d('cognit_frontend') }}"
-  roles:
-    - cognit_frontend
-
-- name: Setup ai-orchestrator
+- name: Bootstrap frontend with internal ONE repo
+  hosts: frontend
   gather_facts: true
-  hosts: "{{ ai_group | d('ai') }}"
-  roles:
-    - ai
+  tasks:
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: "{{ inventory_hostname }}"
+
+    - name: Stop unattended-upgrades (holds dpkg lock on fresh VMs)
+      ansible.builtin.systemd:
+        name: unattended-upgrades
+        state: stopped
+      failed_when: false
+
+    - name: Purge unattended-upgrades
+      ansible.builtin.apt:
+        name: unattended-upgrades
+        state: absent
+        purge: true
+      failed_when: false
+
+    - name: Add internal OpenNebula APT repo
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/opennebula.list
+        content: "deb [trusted=yes] {{ one_internal_repo_url }} {{ ansible_distribution_release }} {{ one_internal_repo_component }}\n"
+        mode: "0644"
+      when: one_internal_repo_url is defined
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Prevent one-deploy from overwriting the repo
+      ansible.builtin.set_fact:
+        opennebula_repo:
+          changed: true
+          dest: /etc/apt/sources.list.d/opennebula.list
+      when: one_internal_repo_url is defined
+
+- ansible.builtin.import_playbook: opennebula.deploy.pre
+- ansible.builtin.import_playbook: opennebula.deploy.site
+- ansible.builtin.import_playbook: cognit-frontend.yaml

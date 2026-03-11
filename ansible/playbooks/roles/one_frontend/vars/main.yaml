@@ -1,6 +1,0 @@
----
-terraform_version: 0.14.7
-oneprovision_pip_dependencies:
-    - cryptography<3.4
-    - ansible==2.9
-    - jinja2>=2.10.0

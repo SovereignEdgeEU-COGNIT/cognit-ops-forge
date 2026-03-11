@@ -1,0 +1,8 @@
+# OpsForge control-plane template
+# Usage: ./opsforge deploy template-frontend.yaml
+---
+:infra:
+  :hosts:
+    :frontend: "172.20.0.4"       # Change to the IP/hostname of your frontend host (root SSH required)
+:cognit:
+  :one_pass: "cognit-onepass"     # Change to the desired oneadmin password

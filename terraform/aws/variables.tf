@@ -25,23 +25,6 @@ variable "ssh_key_path" {
   default     = "~/.ssh/id_rsa"
 }
 
-
-variable "fireedge_port" {
-  type    = number
-  default = 2616
-}
-
-variable "sunstone_port" {
-  type    = number
-  default = 9869
-}
-
-variable "frontend_port" {
-  type    = number
-  default = 1338
-}
-
-
 variable "ssh_user" {
   description = "SSH user the SSH client will connect as"
   type        = string

@@ -1,16 +1,17 @@
-# Create COGNIT Frontend EC2 Instance
+# Single frontend EC2 instance (OpenNebula + COGNIT packages)
 resource "aws_instance" "frontend" {
   tags = {
     Name = "cognit-frontend"
   }
-  instance_type = var.ec2_instance_type
-  ami           = data.aws_ssm_parameter.ubuntu.value
-  root_block_device {
-    volume_size = var.volume_size
-  }
+  instance_type               = var.ec2_instance_type
+  ami                         = data.aws_ssm_parameter.ubuntu.value
+  associate_public_ip_address = true
   subnet_id                   = aws_subnet.cognit.id
   key_name                    = var.ssh_key
   vpc_security_group_ids      = [aws_security_group.frontend.id]
+  root_block_device {
+    volume_size = var.volume_size
+  }
   connection {
     type        = "ssh"
     user        = var.ssh_user
@@ -19,11 +20,10 @@ resource "aws_instance" "frontend" {
   }
 }
 
-# Security Group for COGNIT Frontend
+# Security group for frontend (single host)
 resource "aws_security_group" "frontend" {
   vpc_id = aws_vpc.opsforge.id
 
-  # Allow all outbound traffic
   egress {
     from_port   = 0
     to_port     = 0
@@ -31,20 +31,64 @@ resource "aws_security_group" "frontend" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Allow SSH from anywhere
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  # Allow frontend traffic from the COGNIT subnet only
   ingress {
-    from_port   = var.frontend_port
-    to_port     = var.frontend_port
+    from_port   = 80
+    to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = [ aws_subnet.cognit.cidr_block ]
+    cidr_blocks = ["0.0.0.0/0"]
   }
-
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 2633
+    to_port     = 2633
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 2474
+    to_port     = 2474
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 5030
+    to_port     = 5030
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 9869
+    to_port     = 9869
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 2616
+    to_port     = 2616
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 1338
+    to_port     = 1338
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 9090
+    to_port     = 9090
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
