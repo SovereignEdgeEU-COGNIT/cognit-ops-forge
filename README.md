@@ -94,6 +94,12 @@ The `one-deploy` submodule is used as an Ansible collection (`opennebula.deploy`
 
 ## Deploy
 
+### Step 0 — Initialize one-deploy submodule
+
+```bash
+git submodule update --init ansible/one-deploy
+```
+
 ### Step 1 — Deploy the control plane
 
 ```bash
